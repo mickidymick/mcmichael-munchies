@@ -96,14 +96,14 @@
 </html>
 
 <script>
-  const recipes = [
-    { title: "Grandma’s Apple Pie", url: "recipes/apple-pie.html" },
-    { title: "Spaghetti Carbonara", url: "recipes/carbonara.html" },
-    { title: "Chicken Pot Pie", url: "recipes/chicken-pot-pie.html" },
-    { title: "Chocolate Chip Cookies", url: "recipes/cookies.html" },
-    { title: "Vegetarian Chili", url: "recipes/chili.html" }
-    // Add more recipes as needed
-  ];
+    let recipes = [];
+
+    fetch("recipes.json")
+        .then(response => response.json())
+        .then(data => {
+            recipes = data;
+        });
+
 
   const searchInput = document.getElementById("liveSearchInput");
   const searchResults = document.getElementById("searchResults");
