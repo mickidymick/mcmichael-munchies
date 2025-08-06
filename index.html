@@ -45,6 +45,12 @@
             <a href="categories.html">Bread</a>
             <a href="categories.html">Drinks</a>
             <a href="about.html">About</a>
+
+            <div class="live-search">
+                <input type="text" id="liveSearchInput" placeholder="Search recipes..." />
+                <div id="searchResults"></div>
+            </div>
+
         </nav>
     </header>
 
@@ -88,3 +94,51 @@
     <script src="carousel.js"></script>
 </body>
 </html>
+
+<script>
+  const recipes = [
+    { title: "Grandma’s Apple Pie", url: "recipes/apple-pie.html" },
+    { title: "Spaghetti Carbonara", url: "recipes/carbonara.html" },
+    { title: "Chicken Pot Pie", url: "recipes/chicken-pot-pie.html" },
+    { title: "Chocolate Chip Cookies", url: "recipes/cookies.html" },
+    { title: "Vegetarian Chili", url: "recipes/chili.html" }
+    // Add more recipes as needed
+  ];
+
+  const searchInput = document.getElementById("liveSearchInput");
+  const searchResults = document.getElementById("searchResults");
+
+  searchInput.addEventListener("input", function () {
+    const query = this.value.toLowerCase();
+    searchResults.innerHTML = '';
+    if (!query) {
+      searchResults.style.display = 'none';
+      return;
+    }
+
+    const filtered = recipes.filter(r =>
+      r.title.toLowerCase().includes(query)
+    );
+
+    if (filtered.length === 0) {
+      searchResults.innerHTML = '<div style="padding: 8px;">No results</div>';
+    } else {
+      filtered.forEach(recipe => {
+        const link = document.createElement("a");
+        link.href = recipe.url;
+        link.textContent = recipe.title;
+        searchResults.appendChild(link);
+      });
+    }
+
+    searchResults.style.display = 'block';
+  });
+
+  // Optional: hide results if clicking elsewhere
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".live-search")) {
+      searchResults.style.display = "none";
+    }
+  });
+</script>
+
