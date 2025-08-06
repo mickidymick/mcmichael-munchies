@@ -16,6 +16,9 @@
         <a href="index.html" class="logo-link">
             <img src="logo.png" alt="McMichael Munchies logo" class="logo">
         </a>
+
+        <button class="hamburger" aria-label="Menu">&#9776;</button>
+
         <nav class="nav-links">
             <div class="dropdown">
                 <button class="dropbtn">Meals</button>
@@ -92,6 +95,27 @@
     </footer>
 
     <script src="carousel.js"></script>
+
+    <script>
+  const hamburger = document.querySelector(".hamburger");
+  const navLinks = document.querySelector(".nav-links");
+
+  hamburger.addEventListener("click", () => {
+    navLinks.classList.toggle("show");
+  });
+
+  // Optional: toggle individual dropdowns on mobile
+  const dropdowns = document.querySelectorAll(".dropdown .dropbtn");
+  dropdowns.forEach((btn) =>
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const parent = this.parentElement;
+      parent.classList.toggle("open");
+    })
+  );
+</script>
+
+
 </body>
 </html>
 

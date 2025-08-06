@@ -19,6 +19,51 @@ body {
     text-decoration: none;
 }
 
+/* Hamburger button */
+.hamburger {
+  font-size: 24px;
+  background: none;
+  border: none;
+  display: none;
+  cursor: pointer;
+}
+
+/* --- Mobile Styles --- */
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+
+  .nav-links {
+    display: none;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .nav-links.show {
+    display: flex;
+  }
+
+  .dropdown-content {
+    position: static;
+  }
+
+  .dropdown:hover .dropdown-content {
+    display: none;
+  }
+
+  .dropdown .dropbtn::after {
+    content: " ▼";
+  }
+
+  .dropdown.open .dropdown-content {
+    display: block;
+  }
+}
+
+
+
+
 .logo {
     height: 75px; /* Adjust as needed */
     width: auto;
