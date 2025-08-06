@@ -37,6 +37,7 @@ h1 {
 }
 
 .intro-text p {
+    font-family: 'Titillium Web';
     text-align: center;
     font-size: 1.25rem;
     max-width: 700px;
