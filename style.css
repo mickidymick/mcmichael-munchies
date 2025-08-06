@@ -6,6 +6,23 @@ body {
     color: #333;
 }
 
+.site-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+}
+
+.logo-link {
+    text-decoration: none;
+}
+
+.logo {
+    height: 50px; /* Adjust as needed */
+    width: auto;
+}
+
 h1 {
     text-align: center;
     margin: 2rem 0 1rem;
