@@ -12,5 +12,6 @@ function nextSlide() {
   showSlide(currentSlide);
 }
 
-setInterval(nextSlide, 4000); // Change slide every 4 seconds
+showSlide(currentSlide); // Initial slide
+setInterval(nextSlide, 4000); // Rotate every 4s
 
