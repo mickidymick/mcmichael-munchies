@@ -2,20 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>McMichael Munchies</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1>Welcome to McMichael Munchies 🍪</h1>
-    <p>Your new favorite spot for delicious, homemade treats delivered to your door.</p>
-    <a href="#contact" class="cta-button">Get Notified</a>
-  </div>
 
+  <!-- Carousel / Hero -->
+  <section class="carousel">
+    <div class="carousel-slide active" style="background-image: url('images/chocolate-chip-cookies.jpg')">
+      <a href="#">Chocolate Chip Cookies</a>
+    </div>
+    <div class="carousel-slide" style="background-image: url('images/mac-n-cheese.jpg')">
+      <a href="#">Creamy Mac & Cheese</a>
+    </div>
+    <div class="carousel-slide" style="background-image: url('images/pie.jpg')">
+      <a href="#">Grandma’s Apple Pie</a>
+    </div>
+  </section>
+
+  <!-- Categories -->
+  <main class="categories">
+    <h1>Explore Recipes</h1>
+    <div class="category-grid">
+      <a class="category" href="#">🍲 Family Recipes</a>
+      <a class="category" href="#">🥗 Healthy Choices</a>
+      <a class="category" href="#">🍞 Breads & Baking</a>
+      <a class="category" href="#">🍰 Desserts</a>
+      <a class="category" href="#">⏱️ Quick Meals</a>
+      <a class="category" href="#">🌎 World Flavors</a>
+    </div>
+  </main>
+
+  <!-- Footer -->
   <footer>
-    <p>&copy; 2025 McMichael Munchies. All rights reserved.</p>
+    <p>&copy; 2025 McMichael Munchies. Recipes from our home to yours.</p>
   </footer>
+
+  <script src="carousel.js"></script>
 </body>
 </html>
 
