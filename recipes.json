@@ -28,6 +28,11 @@
     "url": "recipes/cookies.html",
     "category": "Desserts",
     "tags": ["chocolate", "cookies", "baking"]
+  },
+  {
+      "title": "Rice Bowl",
+      "url": "recipes/rice-bowl.html",
+      "category": "Japanese",
+      "tags": ["rice", "japanese", "quick"]
   }
 ]
-
