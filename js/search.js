@@ -6,6 +6,7 @@ fetch("recipes.json")
     .then(response => response.json())
     .then(data => {
         recipes = data;
+        console.log("Recipes loaded", recipes);
     });
 
 document.addEventListener("DOMContentLoaded", () => {
