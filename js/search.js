@@ -1,3 +1,5 @@
+console.log("search.js loaded");
+
 let recipes = [];
 
 fetch("recipes.json")
