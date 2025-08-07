@@ -9,11 +9,8 @@
 </head>
 
 <body>
-    <div class="top-bar">
-        <a href="index.html" class="logo-link">
-            <img src="../images/logo.png" alt="McMichael Munchies" class="top-logo" />
-        </a>
-    </div>
+    <!-- Website Header -->
+    <div id="site-header"></div>
 
     <div class="recipe-container">
         <header class="recipe-header">
@@ -59,5 +56,26 @@
         </section>
     </div>
 
+    <script>
+        // Load the site header and then load nav-bar.js
+        fetch('../html/site-header.html')
+        .then(res => res.text())
+        .then(html => {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+            const nav_bar = temp.querySelector('.site-header');
+            if (nav_bar) {
+            document.getElementById('site-header').appendChild(nav_bar);
+            // Now load nav-bar.js after header is in place
+            const script = document.createElement('script');
+            script.src = '../js/nav-bar.js';
+            document.body.appendChild(script);
+            } else { 
+            console.warn("No .site-header element found in site-header.html");
+            }
+        })
+        .catch(err => console.error('Error loading site-header.html:', err));
+    </script>
+    <script src="../js/search.js"></script>
 </body>
 </html>
