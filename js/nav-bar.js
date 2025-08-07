@@ -1,22 +1,20 @@
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("JS loaded");
-    
-    const hamburger = document.querySelector(".hamburger");
-    const navLinks = document.querySelector(".nav-links");
+console.log("nav-bar.js loaded");
 
-    if (hamburger && navLinks) {
-        hamburger.addEventListener("click", () => {
-            console.log("Hamburger clicked");
-            navLinks.classList.toggle("show");
-        });
-    }
+const hamburger = document.querySelector(".hamburger");
+const navLinks = document.querySelector(".nav-links");
 
-    const dropdowns = document.querySelectorAll(".dropdown .dropbtn");
-    dropdowns.forEach((btn) =>
-        btn.addEventListener("click", function (e) {
-            e.preventDefault();
-            const parent = this.parentElement;
-            parent.classList.toggle("open");
-        })
-    );
-});
+if (hamburger && navLinks) {
+    hamburger.addEventListener("click", () => {
+        console.log("Hamburger clicked");
+        navLinks.classList.toggle("show");
+    });
+}
+
+const dropdowns = document.querySelectorAll(".dropdown .dropbtn");
+dropdowns.forEach((btn) =>
+    btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const parent = this.parentElement;
+        parent.classList.toggle("open");
+    })
+);
