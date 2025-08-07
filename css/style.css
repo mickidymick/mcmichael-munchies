@@ -35,7 +35,7 @@ body {
   }
 
   .nav-links {
-    display: none;
+    display: none !important;
     flex-direction: column;
     width: 100%;
   }
