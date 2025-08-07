@@ -7,7 +7,7 @@
         <link rel="stylesheet" href="style.css" />
         <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
 
-        <!-- OR for .png format -->
+        <!-- favicon -->
         <link rel="icon" href="icons/favicon.png" type="image/png">
     </head>
 
@@ -15,7 +15,7 @@
         <!-- Website Header -->
         <div id="site-header"></div>
 
-        <!-- Carousel / Hero -->
+        <!-- Carousel -->
         <section class="carousel">
             <div class="carousel-slide active" style="background-image: url('images/chocolate-chip-cookies.jpg')">
                 <a href="#">Chocolate Chip Cookies</a>
@@ -52,27 +52,26 @@
             <p>&copy; 2025 McMichael Munchies. Recipes from our home to yours.</p>
         </footer>
 
-        <script src="carousel.js"></script>
+        <script src="js/carousel.js"></script>
+        <script src="js/navbar.js"></script>
+        <script src="js/search.js"></script>
+        <script>
+          fetch('html/site-header.html')
+            .then(res => res.text())
+            .then(html => {
+              // Parse HTML string
+              const temp = document.createElement('div');
+              temp.innerHTML = html;
+
+              // Get the element by class
+              const nav_bar = temp.querySelector('.site-header');
+
+              // Append it to the container
+              if (nav_bar) {
+                document.getElementById('site-header').appendChild(nav_bar);
+              }
+            });
+        </script>
     </body>
 </html>
 
-
-<script src="scripts/navbar.js"></script>
-<script src="scripts/search.js"></script>
-<script>
-  fetch('includes/site-header.html')
-    .then(res => res.text())
-    .then(html => {
-      // Parse HTML string
-      const temp = document.createElement('div');
-      temp.innerHTML = html;
-
-      // Get the element by class
-      const nav_bar = temp.querySelector('.site-header');
-
-      // Append it to the container
-      if (nav_bar) {
-        document.getElementById('site-header').appendChild(nav_bar);
-      }
-    });
-</script>
