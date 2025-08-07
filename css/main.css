@@ -1,0 +1,65 @@
+/* General Styles */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fffdf8;
+    color: #333;
+    padding: 0 1rem;
+}
+
+h1 {
+    text-align: center;
+    margin: 2rem 0 1rem;
+}
+
+.intro-text h2 {
+    font-family: 'Pacifico', cursive;
+    text-align: center;
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.intro-text p {
+    font-family: 'Titillium Web';
+    text-align: center;
+    font-size: 1.25rem;
+    max-width: 700px;
+    margin: 0 auto;
+    color: #555;
+}
+
+/* === Categories === */
+.categories {
+    padding: 2rem;
+}
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    max-width: 1000px;
+    margin: auto;
+}
+
+.category {
+    background-color: #ffe8cc;
+    padding: 1.5rem;
+    border-radius: 10px;
+    text-align: center;
+    font-size: 1.25rem;
+    text-decoration: none;
+    color: #333;
+    transition: background-color 0.3s;
+}
+
+.category:hover {
+    background-color: #ffd4a1;
+}
+
+/* === Footer === */
+footer {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: #fff2e1;
+    font-size: 0.9rem;
+}

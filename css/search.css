@@ -1,0 +1,35 @@
+.live-search {
+    position: relative;
+}
+
+#liveSearchInput {
+  padding: 8px 12px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  width: 200px;
+}
+
+#searchResults {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  width: 100%;
+  z-index: 999;
+  display: none;
+  margin-top: 5px;
+}
+
+#searchResults a {
+  display: block;
+  padding: 8px;
+  text-decoration: none;
+  color: black;
+}
+
+#searchResults a:hover {
+  background-color: #f0f0f0;
+}
