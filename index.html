@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <!-- Version 16 -->
+    <!-- Version 17 -->
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -65,7 +65,10 @@
               const temp = document.createElement('div');
               temp.innerHTML = html;
               const nav_bar = temp.querySelector('.site-header');
+              console.log("here");
               if (nav_bar) {
+                console.log("here");
+
                 document.getElementById('site-header').appendChild(nav_bar);
 
                 // Now load nav-bar.js after header is in place
