@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <!-- Version 15 -->
+    <!-- Version 16 -->
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -72,6 +72,8 @@
                 const script = document.createElement('script');
                 script.src = 'js/nav-bar.js';
                 document.body.appendChild(script);
+              } else { 
+                console.warn("No .site-header element found in site-header.html");
               }
             })
             .catch(err => console.error('Error loading site-header.html:', err));
