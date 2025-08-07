@@ -1,19 +1,20 @@
-console.log("search.js loaded");
-
 let recipes = [];
 
 fetch("recipes.json")
     .then(response => response.json())
     .then(data => {
         recipes = data;
-        console.log("Recipes loaded", recipes);
+        initializeSearch(); // <--- Start search listener only when data is ready
     });
 
-document.addEventListener("DOMContentLoaded", () => {
+function initializeSearch() {
     const searchInput = document.getElementById("liveSearchInput");
     const searchResults = document.getElementById("searchResults");
 
-    if (!searchInput || !searchResults) return;
+    if (!searchInput || !searchResults) {
+        console.warn("Search input or results container not found");
+        return;
+    }
 
     searchInput.addEventListener("input", function () {
         const query = this.value.toLowerCase();
@@ -47,4 +48,4 @@ document.addEventListener("DOMContentLoaded", () => {
             searchResults.style.display = "none";
         }
     });
-});
+}
