@@ -23,14 +23,12 @@
     cursor: pointer;
 }
 
-/*
 .nav-links {
     display: flex;
     gap: 1rem;
     align-items: center;
     transition: all 0.3s ease;
 }
-*/
 
 .nav-links a {
     text-decoration: none;
