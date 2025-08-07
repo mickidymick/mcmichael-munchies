@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <!-- Version 13 -->
+    <!-- Version 14 -->
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -56,25 +56,24 @@
         <footer>
             <p>&copy; 2025 McMichael Munchies. Recipes from our home to yours.</p>
         </footer>
-
+        
         <script>
-          fetch('html/site-header.html')
-            .then(res => res.text())
-            .then(html => {
-              // Parse HTML string
-              const temp = document.createElement('div');
-              temp.innerHTML = html;
+            fetch('html/site-header.html')
+                .then(res => res.text())
+                .then(html => {
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                const nav_bar = temp.querySelector('.site-header');
+                if (nav_bar) {
+                    document.getElementById('site-header').appendChild(nav_bar);
 
-              // Get the element by class
-              const nav_bar = temp.querySelector('.site-header');
-
-              // Append it to the container
-              if (nav_bar) {
-                document.getElementById('site-header').appendChild(nav_bar);
-              }
+                    // Now load nav-bar.js manually
+                    const script = document.createElement('script');
+                    script.src = 'js/nav-bar.js';
+                    document.body.appendChild(script);
+                }
             });
         </script>
-        <script src="js/nav-bar.js"></script>
         <script src="js/search.js"></script>
         <script src="js/carousel.js"></script>
     </body>
