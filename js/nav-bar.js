@@ -1,11 +1,8 @@
-console.log("nav-bar.js loaded");
-
 const hamburger = document.querySelector(".hamburger");
 const navLinks = document.querySelector(".nav-links");
 
 if (hamburger && navLinks) {
     hamburger.addEventListener("click", () => {
-        console.log("Hamburger clicked");
         navLinks.classList.toggle("show");
     });
 }
