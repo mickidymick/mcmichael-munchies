@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-    <!-- Version 14 -->
+    <!-- Version 15 -->
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -56,24 +56,27 @@
         <footer>
             <p>&copy; 2025 McMichael Munchies. Recipes from our home to yours.</p>
         </footer>
-        
-        <script>
-            fetch('html/site-header.html')
-                .then(res => res.text())
-                .then(html => {
-                const temp = document.createElement('div');
-                temp.innerHTML = html;
-                const nav_bar = temp.querySelector('.site-header');
-                if (nav_bar) {
-                    document.getElementById('site-header').appendChild(nav_bar);
 
-                    // Now load nav-bar.js manually
-                    const script = document.createElement('script');
-                    script.src = 'js/nav-bar.js';
-                    document.body.appendChild(script);
-                }
-            });
+        <script>
+          // Load the site header and then load nav-bar.js
+          fetch('html/site-header.html')
+            .then(res => res.text())
+            .then(html => {
+              const temp = document.createElement('div');
+              temp.innerHTML = html;
+              const nav_bar = temp.querySelector('.site-header');
+              if (nav_bar) {
+                document.getElementById('site-header').appendChild(nav_bar);
+
+                // Now load nav-bar.js after header is in place
+                const script = document.createElement('script');
+                script.src = 'js/nav-bar.js';
+                document.body.appendChild(script);
+              }
+            })
+            .catch(err => console.error('Error loading site-header.html:', err));
         </script>
+
         <script src="js/search.js"></script>
         <script src="js/carousel.js"></script>
     </body>
