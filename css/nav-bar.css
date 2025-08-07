@@ -98,13 +98,13 @@
     }
 
     .nav-links {
-        display: none !important;
+        display: none;
         flex-direction: column;
         width: 100%;
     }
 
     .nav-links.show {
-        display: flex !important;
+        display: flex;
     }
 
     .dropdown-content {
