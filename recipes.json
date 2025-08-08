@@ -1,37 +1,37 @@
 [
   {
     "title": "Grandma’s Apple Pie",
-    "url": "recipes/apple-pie.html",
+    "url": "https://mcmichael-munchies.com/recipes/apple-pie.html",
     "category": "Desserts",
     "tags": ["apple", "pie", "family"]
   },
   {
     "title": "Spaghetti Carbonara",
-    "url": "recipes/carbonara.html",
+    "url": "https://mcmichael-munchies.com/recipes/carbonara.html",
     "category": "Pasta",
     "tags": ["italian", "bacon", "quick"]
   },
   {
     "title": "Chicken Pot Pie",
-    "url": "recipes/chicken-pot-pie.html",
+    "url": "https://mcmichael-munchies.com/recipes/chicken-pot-pie.html",
     "category": "Comfort Food",
     "tags": ["chicken", "potato", "savory"]
   },
   {
     "title": "Vegetarian Chili",
-    "url": "recipes/chili.html",
+    "url": "https://mcmichael-munchies.com/recipes/chili.html",
     "category": "Vegetarian",
     "tags": ["beans", "spicy", "healthy"]
   },
   {
     "title": "Chocolate Chip Cookies",
-    "url": "recipes/cookies.html",
+    "url": "https://mcmichael-munchies.com/recipes/cookies.html",
     "category": "Desserts",
     "tags": ["chocolate", "cookies", "baking"]
   },
   {
       "title": "Rice Bowl",
-      "url": "recipes/rice-bowl.html",
+      "url": "https://mcmichael-munchies.com/recipes/rice-bowl.html",
       "category": "Japanese",
       "tags": ["rice", "japanese", "quick"]
   }
