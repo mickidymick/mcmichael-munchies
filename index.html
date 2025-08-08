@@ -5,15 +5,15 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <title>McMichael Munchies</title>
-        <link rel="stylesheet" href="css/nav-bar.css">
-        <link rel="stylesheet" href="css/search.css">
-        <link rel="stylesheet" href="css/carousel.css">
-        <link rel="stylesheet" href="css/main.css">
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/nav-bar.css">
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/search.css">
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/carousel.css">
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/main.css">
 
         <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
 
         <!-- favicon -->
-        <link rel="icon" href="icons/favicon.png" type="image/png">
+        <link rel="icon" href="https://mcmichael-munchies.com/icons/favicon.png" type="image/png">
     </head>
 
     <body>
@@ -22,13 +22,13 @@
 
         <!-- Carousel -->
         <section class="carousel">
-            <div class="carousel-slide active" style="background-image: url('images/chocolate-chip-cookies.jpg')">
+            <div class="carousel-slide active" style="background-image: url('https://mcmichael-munchies.com/images/chocolate-chip-cookies.jpg')">
                 <a href="#">Chocolate Chip Cookies</a>
             </div>
-            <div class="carousel-slide" style="background-image: url('images/mac-n-cheese.jpg')">
+            <div class="carousel-slide" style="background-image: url('https://mcmichael-munchies.com/images/mac-n-cheese.jpg')">
                 <a href="#">Creamy Mac & Cheese</a>
             </div>
-            <div class="carousel-slide" style="background-image: url('images/pie.jpg')">
+            <div class="carousel-slide" style="background-image: url('https://mcmichael-munchies.com/images/pie.jpg')">
                 <a href="#">Grandma’s Apple Pie</a>
             </div>
         </section>
@@ -59,7 +59,7 @@
 
         <script>
           // Load the site header and then load nav-bar.js
-          fetch('html/site-header.html')
+          fetch('https://mcmichael-munchies.com/html/site-header.html')
             .then(res => res.text())
             .then(html => {
               const temp = document.createElement('div');
@@ -69,7 +69,7 @@
                 document.getElementById('site-header').appendChild(nav_bar);
                 // Now load nav-bar.js after header is in place
                 const script = document.createElement('script');
-                script.src = 'js/nav-bar.js';
+                script.src = 'https://mcmichael-munchies.com/js/nav-bar.js';
                 document.body.appendChild(script);
               } else { 
                 console.warn("No .site-header element found in site-header.html");
@@ -78,8 +78,8 @@
             .catch(err => console.error('Error loading site-header.html:', err));
         </script>
 
-        <script src="js/search.js"></script>
-        <script src="js/carousel.js"></script>
+        <script src="https://mcmichael-munchies.com/js/search.js"></script>
+        <script src="https://mcmichael-munchies.com/js/carousel.js"></script>
     </body>
 </html>
 
