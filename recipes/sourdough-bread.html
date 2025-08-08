@@ -1,81 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Sourdough Bread</title>
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/nav-bar.css">
+        <link rel="stylesheet" href="https://mcmichael-munchies.com/css/search.css">
+        <link rel="stylesheet" href="styles.css" />
+    </head>
 
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Sourdough Bread</title>
-    <link rel="stylesheet" href="styles.css" />
-</head>
+    <body>
+        <!-- Website Header -->
+        <div id="site-header"></div>
 
-<body>
-    <!-- Website Header -->
-    <div id="site-header"></div>
+        <div class="recipe-container">
+            <header class="recipe-header">
+                <h1>Sourdough Bread</h1>
+            </header>
 
-    <div class="recipe-container">
-        <header class="recipe-header">
-            <h1>Sourdough Bread</h1>
-        </header>
+            <img class="recipe-image" src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Sourdough Bread" />
 
-        <img class="recipe-image" src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Sourdough Bread" />
+            <p class="recipe-description">
+                My favorite sourdough bread recipe.
+            </p>
 
-        <p class="recipe-description">
-            My favorite sourdough bread recipe.
-        </p>
+            <section class="ingredients-box">
+                <h2>Ingredients</h2>
+                <ul>
+                    <li>100 g sourdough starter</li>
+                    <li>225 g breadflour</li>
+                    <li>225 g all purpose flour</li>
+                    <li>300 g water</li>
+                    <li> 10 g salt</li>
+                </ul>
+            </section>
 
-        <section class="ingredients-box">
-            <h2>Ingredients</h2>
-            <ul>
-                <li>100 g sourdough starter</li>
-                <li>225 g breadflour</li>
-                <li>225 g all purpose flour</li>
-                <li>300 g water</li>
-                <li> 10 g salt</li>
-            </ul>
-        </section>
+            <section class="recipe-steps">
+                <h2>Instructions</h2>
+                <ol>
+                    <li>
+                        <p>Boil lasagna noodles according to package instructions.</p>
+                        <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Boiling noodles" />
+                    </li>
+                    <li>
+                        <p>In a pan, brown ground beef and add marinara sauce.</p>
+                        <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Cooking beef" />
+                    </li>
+                    <li>
+                        <p>Layer noodles, meat sauce, ricotta, and mozzarella in a baking dish.</p>
+                        <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Layering lasagna" />
+                    </li>
+                    <li>
+                        <p>Top with Parmesan and bake at 375°F (190°C) for 30-40 minutes.</p>
+                    </li>
+                </ol>
+            </section>
+        </div>
 
-        <section class="recipe-steps">
-            <h2>Instructions</h2>
-            <ol>
-                <li>
-                    <p>Boil lasagna noodles according to package instructions.</p>
-                    <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Boiling noodles" />
-                </li>
-                <li>
-                    <p>In a pan, brown ground beef and add marinara sauce.</p>
-                    <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Cooking beef" />
-                </li>
-                <li>
-                    <p>Layer noodles, meat sauce, ricotta, and mozzarella in a baking dish.</p>
-                    <img src="https://mcmichael-munchies.com/images/sourdough-bread.jpg" alt="Layering lasagna" />
-                </li>
-                <li>
-                    <p>Top with Parmesan and bake at 375°F (190°C) for 30-40 minutes.</p>
-                </li>
-            </ol>
-        </section>
-    </div>
-
-    <script>
-        // Load the site header and then load nav-bar.js
-        fetch('https://mcmichael-munchies.com/html/site-header.html')
-        .then(res => res.text())
-        .then(html => {
-            const temp = document.createElement('div');
-            temp.innerHTML = html;
-            const nav_bar = temp.querySelector('.site-header');
-            if (nav_bar) {
-            document.getElementById('site-header').appendChild(nav_bar);
-            // Now load nav-bar.js after header is in place
-            const script = document.createElement('script');
-            script.src = 'https://mcmichael-munchies.com/js/nav-bar.js';
-            document.body.appendChild(script);
-            } else { 
-            console.warn("No .site-header element found in site-header.html");
-            }
-        })
-        .catch(err => console.error('Error loading site-header.html:', err));
-    </script>
-    <script src="https://mcmichael-munchies.com/js/search.js"></script>
-</body>
+        <script>
+            // Load the site header and then load nav-bar.js
+            fetch('https://mcmichael-munchies.com/html/site-header.html')
+            .then(res => res.text())
+            .then(html => {
+                const temp = document.createElement('div');
+                temp.innerHTML = html;
+                const nav_bar = temp.querySelector('.site-header');
+                if (nav_bar) {
+                document.getElementById('site-header').appendChild(nav_bar);
+                // Now load nav-bar.js after header is in place
+                const script = document.createElement('script');
+                script.src = 'https://mcmichael-munchies.com/js/nav-bar.js';
+                document.body.appendChild(script);
+                } else { 
+                console.warn("No .site-header element found in site-header.html");
+                }
+            })
+            .catch(err => console.error('Error loading site-header.html:', err));
+        </script>
+        <script src="https://mcmichael-munchies.com/js/search.js"></script>
+    </body>
 </html>
