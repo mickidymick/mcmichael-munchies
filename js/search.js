@@ -1,6 +1,6 @@
 let recipes = [];
 
-fetch("recipes.json")
+fetch("https://mcmichael-munchies.com/recipes.json")
     .then(response => response.json())
     .then(data => {
         recipes = data;
