@@ -27,11 +27,13 @@
             <section class="ingredients-box">
                 <h2>Ingredients</h2>
                 <ul>
-                    <li>100 g sourdough starter</li>
-                    <li>225 g breadflour</li>
-                    <li>225 g all purpose flour</li>
-                    <li>300 g water</li>
-                    <li> 10 g salt</li>
+                    <style> li { padding-left: 20px; }
+                        <li>100 g sourdough starter</li>
+                        <li>225 g bread flour</li>
+                        <li>225 g all purpose flour</li>
+                        <li>300 g water</li>
+                        <li> 10 g salt</li>
+                    </style>
                 </ul>
             </section>
 
@@ -70,7 +72,7 @@
                 const script = document.createElement('script');
                 script.src = 'https://mcmichael-munchies.com/js/nav-bar.js';
                 document.body.appendChild(script);
-                } else { 
+                } else {
                 console.warn("No .site-header element found in site-header.html");
                 }
             })
