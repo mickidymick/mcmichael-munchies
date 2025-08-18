@@ -84,3 +84,20 @@ body {
     border-radius: 4px;
     margin-top: 0.5rem;
 }
+
+.ingredients {
+  list-style: none;  /* remove default bullets */
+  padding: 0;
+}
+
+.ingredients li {
+  display: flex;
+  align-items: baseline;
+}
+
+.ingredients .amount {
+  width: 80px;          /* adjust as needed */
+  text-align: right;    /* ✅ numbers align to the right */
+  margin-right: 10px;   /* space before ingredient text */
+  font-variant-numeric: tabular-nums; /* makes digits align evenly */
+}
