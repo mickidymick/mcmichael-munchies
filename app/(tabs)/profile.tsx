@@ -13,14 +13,18 @@ import {
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import { useRouter } from 'expo-router';
 import { Colors } from '../../constants/colors';
 import { supabase } from '../../lib/supabase';
+import { useUserRole } from '../../lib/useUserRole';
 
 WebBrowser.maybeCompleteAuthSession();
 
 type Mode = 'login' | 'signup';
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const { role, isAdmin } = useUserRole();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('login');
@@ -93,6 +97,17 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.name}>{user.user_metadata?.full_name ?? 'Family Member'}</Text>
           <Text style={styles.email}>{user.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>
+              {role === 'admin' ? 'Admin' : role === 'member' ? 'Family Member' : 'Pending Approval'}
+            </Text>
+          </View>
+          {isAdmin && (
+            <TouchableOpacity style={styles.adminButton} onPress={() => router.push('/admin')}>
+              <Ionicons name="shield-outline" size={20} color={Colors.primary} />
+              <Text style={styles.adminButtonText}>Manage Members</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
             <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
@@ -204,15 +219,35 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 32, color: '#FFF', fontWeight: '700' },
   name: { fontSize: 20, fontWeight: '700', color: Colors.text },
   email: { fontSize: 14, color: Colors.textSecondary },
-  logoutButton: {
-    marginTop: 24,
+  roleBadge: {
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    marginTop: 4,
+  },
+  roleBadgeText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
     borderWidth: 1,
     borderColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  adminButtonText: { color: Colors.primary, fontWeight: '600', fontSize: 15 },
+  logoutButton: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
     paddingHorizontal: 28,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  logoutText: { color: Colors.primary, fontWeight: '600', fontSize: 15 },
+  logoutText: { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
   authContainer: { flexGrow: 1, justifyContent: 'center', padding: 28, gap: 12 },
   authTitle: {
     fontFamily: 'Pacifico_400Regular',

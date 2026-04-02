@@ -14,15 +14,15 @@ import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+import { useUserRole } from '../../lib/useUserRole';
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { isMemberOrAdmin, userId } = useUserRole();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     loadRecipe();
@@ -38,9 +38,6 @@ export default function RecipeDetailScreen() {
   async function checkFavorite() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    setUserId(user.id);
-    const { data: recipeData } = await supabase.from('recipes').select('created_by').eq('id', id).single();
-    if (recipeData?.created_by === user.id) setIsOwner(true);
     const { data } = await supabase
       .from('favorites')
       .select('id')
@@ -112,7 +109,7 @@ export default function RecipeDetailScreen() {
         <View style={styles.titleRow}>
           <Text style={styles.title}>{recipe.title}</Text>
           <View style={styles.titleActions}>
-            {isOwner && (
+            {isMemberOrAdmin && (
               <>
                 <TouchableOpacity onPress={() => router.push(`/edit-recipe/${recipe.id}`)} style={styles.editButton}>
                   <Ionicons name="pencil-outline" size={20} color={Colors.primary} />

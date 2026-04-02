@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step } from '../lib/supabase';
+import { useUserRole } from '../lib/useUserRole';
 
 const CATEGORIES = [
   "Zach's Favorites", 'All things Sourdough', 'Pizza',
@@ -30,6 +31,7 @@ const CUISINES = [
 
 export default function AddRecipeScreen() {
   const router = useRouter();
+  const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [saving, setSaving] = useState(false);
 
   // Basic fields
@@ -181,6 +183,24 @@ export default function AddRecipeScreen() {
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
+
+  if (roleLoading) {
+    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+  }
+
+  if (!isMemberOrAdmin) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
+          Account Pending Approval
+        </Text>
+        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          Your account needs to be approved by an admin before you can add recipes. Ask Zach to approve you as a family member.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

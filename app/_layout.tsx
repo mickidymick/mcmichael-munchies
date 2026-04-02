@@ -46,6 +46,16 @@ export default function RootLayout() {
             headerTintColor: Colors.primary,
           }}
         />
+        <Stack.Screen
+          name="admin"
+          options={{
+            headerShown: true,
+            headerTitle: 'Manage Members',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
       </Stack>
     </View>
   );

@@ -9,6 +9,7 @@ import {
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useUserRole } from '../lib/useUserRole';
 
 const NAV_LINKS = [
   { label: 'Home', href: '/(tabs)/', icon: 'home-outline' as const },
@@ -20,6 +21,7 @@ const NAV_LINKS = [
 export default function NavBar() {
   const router = useRouter();
   const pathname = usePathname();
+  const { isMemberOrAdmin } = useUserRole();
 
   if (Platform.OS !== 'web') return null;
 
@@ -52,13 +54,15 @@ export default function NavBar() {
           })}
         </View>
 
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => router.push('/add-recipe')}
-        >
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.addBtnText}>Add Recipe</Text>
-        </TouchableOpacity>
+        {isMemberOrAdmin && (
+          <TouchableOpacity
+            style={styles.addBtn}
+            onPress={() => router.push('/add-recipe')}
+          >
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={styles.addBtnText}>Add Recipe</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

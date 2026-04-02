@@ -33,3 +33,12 @@ export type Step = {
   instruction: string;
   image_url?: string;
 };
+
+export type UserRole = 'viewer' | 'member' | 'admin';
+
+export type Profile = {
+  id: string;
+  full_name: string;
+  role: UserRole;
+  created_at: string;
+};

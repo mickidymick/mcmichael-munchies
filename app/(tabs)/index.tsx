@@ -8,12 +8,14 @@ import {
   Dimensions,
   FlatList,
   TextInput,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+import { useUserRole } from '../../lib/useUserRole';
 
 const { width } = Dimensions.get('window');
 
@@ -28,6 +30,7 @@ const CATEGORIES = [
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isMemberOrAdmin } = useUserRole();
   const [featured, setFeatured] = useState<Recipe[]>([]);
   const [recentRecipes, setRecentRecipes] = useState<Recipe[]>([]);
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -65,9 +68,11 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
-            <TouchableOpacity onPress={() => router.push('/add-recipe')} style={styles.addButton}>
-              <Ionicons name="add-circle-outline" size={28} color={Colors.primary} />
-            </TouchableOpacity>
+            {isMemberOrAdmin && (
+              <TouchableOpacity onPress={() => router.push('/add-recipe')} style={styles.addButton}>
+                <Ionicons name="add-circle-outline" size={28} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
           </View>
           <View style={styles.searchRow}>
             <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
@@ -260,6 +265,12 @@ const styles = StyleSheet.create({
   },
   searchIcon: { marginRight: 6 },
   searchInput: { flex: 1, fontSize: 15, color: Colors.text },
+  webSearchContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  webSearchRow: { maxWidth: 900, width: '100%' },
   carouselContainer: { position: 'relative' },
   carouselSlide: { width, height: 220 },
   carouselImage: { width: '100%', height: '100%' },
