@@ -12,16 +12,25 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { supabase, Ingredient, Step } from '../../lib/supabase';
+import { supabase, Ingredient, Step, RecipeFamily } from '../../lib/supabase';
+import { estimateCalories } from '../../lib/nutrition';
 import { useUserRole } from '../../lib/useUserRole';
 
 const CATEGORIES = [
   "Zach's Favorites", 'All things Sourdough', 'Pizza',
   'Desserts', 'Quick & Easy', 'The Wok', 'Other',
+];
+
+const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
+
+const UNITS = [
+  '', 'tsp', 'tbsp', 'cup', 'oz', 'fl oz', 'pt', 'qt', 'gal',
+  'ml', 'l', 'lb', 'g', 'kg', 'pinch', 'dash', 'piece', 'slice',
+  'clove', 'can', 'bag', 'bunch', 'sprig', 'whole',
 ];
 
 const CUISINES = [
@@ -39,20 +48,90 @@ export default function EditRecipeScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [family, setFamily] = useState<RecipeFamily | ''>('');
   const [cuisine, setCuisine] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [prepTime, setPrepTime] = useState('');
+  const [cookTime, setCookTime] = useState('');
+  const [servings, setServings] = useState('');
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ amount: '', unit: '', item: '' }]);
   const [steps, setSteps] = useState<Step[]>([{ order: 1, instruction: '', image_url: undefined }]);
 
+  const [unitDropdownIndex, setUnitDropdownIndex] = useState<number | null>(null);
+
+  // Tags autocomplete
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagsFocused, setTagsFocused] = useState(false);
+
+  useEffect(() => {
+    supabase.from('recipes').select('tags').then(({ data }) => {
+      if (!data) return;
+      const tagSet = new Set<string>();
+      data.forEach((r: { tags: string[] | null }) => (r.tags ?? []).forEach((t) => tagSet.add(t)));
+      setAllTags(Array.from(tagSet).sort());
+    });
+  }, []);
+
+  const currentTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+  const currentPartial = tagsInput.split(',').pop()?.trim().toLowerCase() ?? '';
+
+  const tagSuggestions = useMemo(() => {
+    if (!currentPartial) return [];
+    return allTags
+      .filter((t) => t.startsWith(currentPartial) && !currentTags.includes(t))
+      .slice(0, 6);
+  }, [currentPartial, allTags, currentTags]);
+
+  function acceptTag(tag: string) {
+    const parts = tagsInput.split(',');
+    parts[parts.length - 1] = ` ${tag}`;
+    setTagsInput(parts.join(',') + ', ');
+  }
+
+  // Ingredient autocomplete
+  const [allIngredientNames, setAllIngredientNames] = useState<string[]>([]);
+  const [ingredientFocusIndex, setIngredientFocusIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    supabase.from('recipes').select('ingredients').then(({ data }) => {
+      if (!data) return;
+      const nameSet = new Set<string>();
+      data.forEach((r: { ingredients: Ingredient[] | null }) =>
+        (r.ingredients ?? []).forEach((ing) => {
+          if (ing.item?.trim()) nameSet.add(ing.item.trim().toLowerCase());
+        })
+      );
+      setAllIngredientNames(Array.from(nameSet).sort());
+    });
+  }, []);
+
+  function getIngredientSuggestions(index: number) {
+    const partial = ingredients[index]?.item?.trim().toLowerCase() ?? '';
+    if (!partial) return [];
+    return allIngredientNames
+      .filter((name) => name.startsWith(partial) && name !== partial)
+      .slice(0, 6);
+  }
+
+  function acceptIngredient(index: number, name: string) {
+    updateIngredient(index, 'item', name);
+    setIngredientFocusIndex(null);
+  }
+
+  // Load recipe
   useEffect(() => {
     supabase.from('recipes').select('*').eq('id', id).single().then(({ data }) => {
       if (!data) return;
       setTitle(data.title);
       setDescription(data.description ?? '');
       setCategory(data.category ?? '');
+      setFamily(data.family ?? '');
       setCuisine(data.cuisine ?? '');
       setTagsInput((data.tags ?? []).join(', '));
+      setPrepTime(data.prep_time != null ? String(data.prep_time) : '');
+      setCookTime(data.cook_time != null ? String(data.cook_time) : '');
+      setServings(data.servings != null ? String(data.servings) : '');
       setHeroImage(data.image_url ?? null);
       setIngredients(data.ingredients?.length ? data.ingredients : [{ amount: '', unit: '', item: '' }]);
       setSteps(data.steps?.length ? data.steps : [{ order: 1, instruction: '', image_url: undefined }]);
@@ -126,7 +205,6 @@ export default function EditRecipeScreen() {
 
     setSaving(true);
 
-    // Only re-upload if a new image was picked (blob: or file: URI)
     let imageUrl: string | null = heroImage;
     if (heroImage && (heroImage.startsWith('blob:') || heroImage.startsWith('file://'))) {
       imageUrl = await uploadImage(heroImage, `hero-${Date.now()}`);
@@ -138,10 +216,17 @@ export default function EditRecipeScreen() {
       .filter((s) => s.instruction.trim())
       .map((s, i) => ({ ...s, order: i + 1 }));
 
+    const calories = await estimateCalories(cleanIngredients);
+
     const { error } = await supabase.from('recipes').update({
       title: title.trim(),
       description: description.trim(),
       category,
+      family: family || null,
+      prep_time: prepTime ? parseInt(prepTime, 10) : null,
+      cook_time: cookTime ? parseInt(cookTime, 10) : null,
+      servings: servings ? parseInt(servings, 10) : null,
+      estimated_calories: calories,
       cuisine,
       tags,
       image_url: imageUrl,
@@ -202,6 +287,15 @@ export default function EditRecipeScreen() {
           ))}
         </ScrollView>
 
+        <Text style={styles.label}>Family</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+          {FAMILIES.map((f) => (
+            <TouchableOpacity key={f} style={[styles.chip, family === f && styles.chipActive]} onPress={() => setFamily(family === f ? '' : f)}>
+              <Text style={[styles.chipText, family === f && styles.chipTextActive]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
         <Text style={styles.label}>Cuisine</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
           {CUISINES.map((c) => (
@@ -211,15 +305,143 @@ export default function EditRecipeScreen() {
           ))}
         </ScrollView>
 
+        {/* Tags with autocomplete */}
         <Text style={styles.label}>Tags</Text>
-        <TextInput style={styles.input} placeholder="apple, family, baking" placeholderTextColor={Colors.textSecondary} value={tagsInput} onChangeText={setTagsInput} autoCapitalize="none" />
+        <View>
+          <TextInput
+            style={styles.input}
+            placeholder="apple, family, baking  (comma separated)"
+            placeholderTextColor={Colors.textSecondary}
+            value={tagsInput}
+            onChangeText={setTagsInput}
+            onFocus={() => setTagsFocused(true)}
+            onBlur={() => setTimeout(() => setTagsFocused(false), 200)}
+            onKeyPress={(e: any) => {
+              if (e.nativeEvent.key === 'Tab' && tagSuggestions.length > 0) {
+                e.preventDefault?.();
+                acceptTag(tagSuggestions[0]);
+              }
+            }}
+            autoCapitalize="none"
+          />
+          {tagsFocused && tagSuggestions.length > 0 && (
+            <View style={styles.suggestionsBox}>
+              {tagSuggestions.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  style={styles.suggestionItem}
+                  onPress={() => acceptTag(tag)}
+                >
+                  <Text style={styles.suggestionText}>{tag}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        {/* Prep Time / Cook Time / Servings */}
+        <View style={styles.timeRow}>
+          <View style={styles.timeField}>
+            <Text style={styles.label}>Prep Time (min)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 15"
+              placeholderTextColor={Colors.textSecondary}
+              value={prepTime}
+              onChangeText={setPrepTime}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={styles.timeField}>
+            <Text style={styles.label}>Cook Time (min)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 30"
+              placeholderTextColor={Colors.textSecondary}
+              value={cookTime}
+              onChangeText={setCookTime}
+              keyboardType="numeric"
+            />
+          </View>
+          <View style={styles.timeField}>
+            <Text style={styles.label}>Servings</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 4"
+              placeholderTextColor={Colors.textSecondary}
+              value={servings}
+              onChangeText={setServings}
+              keyboardType="numeric"
+            />
+          </View>
+        </View>
 
         <Text style={styles.sectionHeader}>Ingredients</Text>
         {ingredients.map((ing, i) => (
-          <View key={i} style={styles.ingredientRow}>
+          <View key={i} style={[styles.ingredientRow, (unitDropdownIndex === i || ingredientFocusIndex === i) && { zIndex: 100 }]}>
             <TextInput style={[styles.input, styles.amountInput]} placeholder="Amt" placeholderTextColor={Colors.textSecondary} value={ing.amount} onChangeText={(v) => updateIngredient(i, 'amount', v)} />
-            <TextInput style={[styles.input, styles.unitInput]} placeholder="Unit" placeholderTextColor={Colors.textSecondary} value={ing.unit} onChangeText={(v) => updateIngredient(i, 'unit', v)} />
-            <TextInput style={[styles.input, styles.itemInput]} placeholder="Ingredient" placeholderTextColor={Colors.textSecondary} value={ing.item} onChangeText={(v) => updateIngredient(i, 'item', v)} />
+            <View style={styles.unitWrapper}>
+              <TouchableOpacity
+                style={[styles.input, styles.unitInput]}
+                onPress={() => setUnitDropdownIndex(unitDropdownIndex === i ? null : i)}
+              >
+                <Text style={ing.unit ? styles.unitText : styles.unitPlaceholder}>
+                  {ing.unit || 'Unit'}
+                </Text>
+                <Ionicons name="chevron-down" size={14} color={Colors.textSecondary} />
+              </TouchableOpacity>
+              {unitDropdownIndex === i && (
+                <View style={styles.unitDropdown}>
+                  <ScrollView style={styles.unitDropdownScroll} nestedScrollEnabled>
+                    {UNITS.map((u) => (
+                      <TouchableOpacity
+                        key={u}
+                        style={[styles.unitOption, ing.unit === u && styles.unitOptionActive]}
+                        onPress={() => {
+                          updateIngredient(i, 'unit', u);
+                          setUnitDropdownIndex(null);
+                        }}
+                      >
+                        <Text style={[styles.unitOptionText, ing.unit === u && styles.unitOptionTextActive]}>
+                          {u || '(none)'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+            <View style={[styles.ingredientItemWrapper, ingredientFocusIndex === i && { zIndex: 100 }]}>
+              <TextInput
+                style={[styles.input, styles.itemInput]}
+                placeholder="Ingredient"
+                placeholderTextColor={Colors.textSecondary}
+                value={ing.item}
+                onChangeText={(v) => updateIngredient(i, 'item', v)}
+                onFocus={() => setIngredientFocusIndex(i)}
+                onBlur={() => setTimeout(() => setIngredientFocusIndex(null), 200)}
+                onKeyPress={(e: any) => {
+                  const suggestions = getIngredientSuggestions(i);
+                  if (e.nativeEvent.key === 'Tab' && suggestions.length > 0) {
+                    e.preventDefault?.();
+                    acceptIngredient(i, suggestions[0]);
+                  }
+                }}
+              />
+              {ingredientFocusIndex === i && getIngredientSuggestions(i).length > 0 && (
+                <View style={styles.ingredientSuggestions}>
+                  {getIngredientSuggestions(i).map((name) => (
+                    <TouchableOpacity
+                      key={name}
+                      style={styles.suggestionItem}
+                      onPress={() => acceptIngredient(i, name)}
+                    >
+                      <Text style={styles.suggestionText}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
             {ingredients.length > 1 && (
               <TouchableOpacity onPress={() => removeIngredient(i)} style={styles.removeBtn}>
                 <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
@@ -271,7 +493,7 @@ export default function EditRecipeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 20, paddingBottom: 60 },
-  heroPickerButton: { marginBottom: 20, borderRadius: 12, overflow: 'hidden' },
+  heroPickerButton: { marginBottom: 20, borderRadius: 12, overflow: 'hidden', maxWidth: 600, width: '100%', alignSelf: 'center' },
   heroPreview: { width: '100%', height: 200 },
   heroPlaceholder: { height: 180, backgroundColor: Colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed' },
   heroPlaceholderText: { fontSize: 14, color: Colors.textSecondary },
@@ -284,9 +506,66 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 13, color: Colors.text, fontWeight: '500' },
   chipTextActive: { color: '#FFF' },
+  timeRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  timeField: { flex: 1 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' },
   amountInput: { width: 56 },
-  unitInput: { width: 70 },
+  unitWrapper: { position: 'relative', zIndex: 10 },
+  unitInput: {
+    width: 80,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 2,
+  },
+  unitText: { fontSize: 15, color: Colors.text },
+  unitPlaceholder: { fontSize: 15, color: Colors.textSecondary },
+  unitDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    width: 120,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginTop: 4,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  unitDropdownScroll: { maxHeight: 200 },
+  unitOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  unitOptionActive: { backgroundColor: Colors.secondary },
+  unitOptionText: { fontSize: 14, color: Colors.text },
+  unitOptionTextActive: { color: Colors.primary, fontWeight: '600' },
+  ingredientItemWrapper: { flex: 1, position: 'relative' },
+  ingredientSuggestions: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginTop: 4,
+    zIndex: 100,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
   itemInput: { flex: 1 },
   removeBtn: { padding: 2 },
   addRowBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 10, marginBottom: 4 },
@@ -297,7 +576,22 @@ const styles = StyleSheet.create({
   stepBadgeText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
   stepImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
   stepImageBtnText: { fontSize: 13, color: Colors.textSecondary },
-  stepImagePreview: { width: '100%', height: 160, borderRadius: 8 },
+  stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
   saveButton: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 32 },
   saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },
+  suggestionsBox: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  suggestionText: { fontSize: 14, color: Colors.text },
 });

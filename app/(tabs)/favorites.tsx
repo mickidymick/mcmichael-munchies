@@ -87,7 +87,7 @@ export default function FavoritesScreen() {
               )}
               <View style={styles.cardInfo}>
                 <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardMeta}>{item.category} · {item.cuisine}</Text>
+                <Text style={styles.cardMeta}>{[item.family, item.category, item.cuisine].filter(Boolean).join(' · ')}</Text>
               </View>
             </TouchableOpacity>
           )}

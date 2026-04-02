@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+import FamilyBadge from '../../components/FamilyBadge';
 import { useUserRole } from '../../lib/useUserRole';
 
 export default function RecipeDetailScreen() {
@@ -99,7 +100,7 @@ export default function RecipeDetailScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Hero Image */}
       {recipe.image_url ? (
-        <Image source={{ uri: recipe.image_url }} style={styles.heroImage} />
+        <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" />
       ) : (
         <View style={[styles.heroImage, styles.heroPlaceholder]} />
       )}
@@ -107,7 +108,10 @@ export default function RecipeDetailScreen() {
       <View style={styles.body}>
         {/* Title row */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{recipe.title}</Text>
+          <View style={styles.titleWithBadge}>
+            <FamilyBadge family={recipe.family} size={36} />
+            <Text style={styles.title}>{recipe.title}</Text>
+          </View>
           <View style={styles.titleActions}>
             {isMemberOrAdmin && (
               <>
@@ -130,7 +134,45 @@ export default function RecipeDetailScreen() {
         </View>
 
         {/* Meta */}
-        <Text style={styles.meta}>{recipe.category} · {recipe.cuisine}</Text>
+        <Text style={styles.meta}>{[recipe.family, recipe.category, recipe.cuisine].filter(Boolean).join(' · ')}</Text>
+
+        {/* Time & Servings */}
+        {(recipe.prep_time || recipe.cook_time || recipe.servings || recipe.estimated_calories) && (
+          <View style={styles.infoBar}>
+            {recipe.prep_time != null && (
+              <View style={styles.infoItem}>
+                <Ionicons name="timer-outline" size={18} color={Colors.primary} />
+                <Text style={styles.infoLabel}>Prep</Text>
+                <Text style={styles.infoValue}>{recipe.prep_time} min</Text>
+              </View>
+            )}
+            {recipe.cook_time != null && (
+              <View style={styles.infoItem}>
+                <Ionicons name="flame-outline" size={18} color={Colors.primary} />
+                <Text style={styles.infoLabel}>Cook</Text>
+                <Text style={styles.infoValue}>{recipe.cook_time} min</Text>
+              </View>
+            )}
+            {recipe.servings != null && (
+              <View style={styles.infoItem}>
+                <Ionicons name="people-outline" size={18} color={Colors.primary} />
+                <Text style={styles.infoLabel}>Servings</Text>
+                <Text style={styles.infoValue}>{recipe.servings}</Text>
+              </View>
+            )}
+            {recipe.estimated_calories != null && (
+              <View style={styles.infoItem}>
+                <Ionicons name="nutrition-outline" size={18} color={Colors.primary} />
+                <Text style={styles.infoLabel}>Calories</Text>
+                <Text style={styles.infoValue}>{recipe.estimated_calories}</Text>
+                {recipe.servings != null && recipe.servings > 0 && (
+                  <Text style={styles.infoSub}>{Math.round(recipe.estimated_calories / recipe.servings)}/serving</Text>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
         {recipe.tags?.length > 0 && (
           <View style={styles.tags}>
             {recipe.tags.map((tag) => (
@@ -189,7 +231,7 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroImage: { width: '100%', height: 260 },
+  heroImage: { width: '100%', maxWidth: 600, height: 260, alignSelf: 'center', borderRadius: 12 },
   heroPlaceholder: { backgroundColor: Colors.border },
   body: { padding: 20 },
   titleRow: {
@@ -199,11 +241,25 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 6,
   },
+  titleWithBadge: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, fontSize: 26, fontWeight: '800', color: Colors.text, lineHeight: 32 },
   titleActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
   editButton: { padding: 4 },
   favButton: {},
   meta: { fontSize: 13, color: Colors.textSecondary, marginBottom: 10 },
+  infoBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.secondary,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 12,
+    gap: 16,
+    justifyContent: 'center',
+  },
+  infoItem: { alignItems: 'center', gap: 2, flex: 1 },
+  infoLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
+  infoValue: { fontSize: 15, color: Colors.text, fontWeight: '700' },
+  infoSub: { fontSize: 10, color: Colors.textSecondary },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
   tag: {
     backgroundColor: Colors.primary + '18',
@@ -253,8 +309,10 @@ const styles = StyleSheet.create({
   stepText: { fontSize: 15, color: Colors.text, lineHeight: 23 },
   stepImage: {
     width: '100%',
+    maxWidth: 600,
     height: 200,
     borderRadius: 10,
     marginTop: 10,
+    alignSelf: 'center',
   },
 });

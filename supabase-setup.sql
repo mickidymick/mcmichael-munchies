@@ -46,7 +46,14 @@ UPDATE profiles
 SET role = 'admin'
 WHERE id = (SELECT id FROM auth.users WHERE email = 'utbigmac41@gmail.com');
 
--- 5. RLS policies on profiles
+-- 5. Add family, prep_time, cook_time, servings columns to recipes
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS family TEXT;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS prep_time INTEGER;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS cook_time INTEGER;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS servings INTEGER;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS estimated_calories INTEGER;
+
+-- 6. RLS policies on profiles
 CREATE POLICY "Profiles are viewable by everyone"
   ON profiles FOR SELECT USING (true);
 
