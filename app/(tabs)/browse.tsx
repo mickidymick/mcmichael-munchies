@@ -5,31 +5,33 @@ import {
   TextInput,
   FlatList,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
-  ScrollView,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
-import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
-import FamilyBadge from '../../components/FamilyBadge';
+import { Colors, Layout } from '../../constants/colors';
 
-const FAMILIES: ('All' | RecipeFamily)[] = ["All", "McMichael's", "Knepp's", "Elmore's"];
+const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
+import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
+import RecipeCard from '../../components/RecipeCard';
+
+const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
 
 const CATEGORIES = [
-  'All', "Zach's Favorites", 'All things Sourdough', 'Pizza',
-  'Desserts', 'Quick & Easy', 'The Wok',
+  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
+  'Beef', 'Chicken', 'Pork', 'Seafood',
+  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
+  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok',
 ];
 
 const CUISINES = [
-  'All', 'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
+  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
   'Indian', 'Comfort Food', 'Other',
 ];
 
 const COOK_TIMES = [
-  { label: 'All', value: 'All' },
   { label: '< 15 min', value: 'quick' },
   { label: '15-45 min', value: 'medium' },
   { label: '45+ min', value: 'long' },
@@ -45,64 +47,106 @@ const DIETARY_TAGS = [
   'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb',
 ];
 
+const PAGE_SIZE = 20;
+// Fetch extra to account for client-side filters removing results
+const FETCH_SIZE = 40;
+
 export default function BrowseScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ category?: string; query?: string; family?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
-  const [selectedCategory, setSelectedCategory] = useState(params.category ?? 'All');
-  const [selectedFamily, setSelectedFamily] = useState(params.family ?? 'All');
-  const [selectedCuisine, setSelectedCuisine] = useState('All');
-  const [selectedCookTime, setSelectedCookTime] = useState('All');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(params.category ? [params.category] : []);
+  const [selectedFamilies, setSelectedFamilies] = useState<string[]>(params.family ? [params.family] : []);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
+  const [selectedCookTimes, setSelectedCookTimes] = useState<string[]>([]);
   const [selectedSort, setSelectedSort] = useState('az');
   const [selectedDietary, setSelectedDietary] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalInDb, setTotalInDb] = useState(0);
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
 
   useEffect(() => {
-    if (params.category) setSelectedCategory(params.category);
+    if (params.category && !selectedCategories.includes(params.category)) {
+      setSelectedCategories([params.category]);
+    }
     if (params.query) setQuery(params.query);
-    if (params.family) setSelectedFamily(params.family);
+    if (params.family && !selectedFamilies.includes(params.family)) {
+      setSelectedFamilies([params.family]);
+    }
   }, [params.category, params.query, params.family]);
 
+  // Debounce search query
   useEffect(() => {
-    fetchRecipes();
-  }, [query, selectedCategory, selectedFamily, selectedCuisine, selectedCookTime, selectedSort, selectedDietary]);
+    const timer = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => clearTimeout(timer);
+  }, [query]);
 
-  function toggleDietary(tag: string) {
-    setSelectedDietary((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
-    );
+  // Reset and fetch when filters change
+  useEffect(() => {
+    setPage(0);
+    setHasMore(true);
+    fetchRecipes(0, true);
+  }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
+
+  function toggleMulti(arr: string[], val: string): string[] {
+    return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
   }
 
   const activeFilterCount = [
-    selectedFamily !== 'All',
-    selectedCategory !== 'All',
-    selectedCuisine !== 'All',
-    selectedCookTime !== 'All',
+    selectedFamilies.length > 0,
+    selectedCategories.length > 0,
+    selectedCuisines.length > 0,
+    selectedCookTimes.length > 0,
     selectedDietary.length > 0,
   ].filter(Boolean).length;
 
-  async function fetchRecipes() {
-    setLoading(true);
-    let req = supabase.from('recipes').select('*');
+  async function fetchRecipes(pageNum: number, reset: boolean) {
+    if (reset) setLoading(true);
+    else setLoadingMore(true);
 
-    if (selectedCategory !== 'All') {
-      req = req.eq('category', selectedCategory);
+    const hasClientFilters = selectedCategories.length > 1 || debouncedQuery.trim() || selectedCookTimes.length > 0 || selectedDietary.length > 0;
+    const fetchSize = hasClientFilters ? FETCH_SIZE : PAGE_SIZE;
+    const from = pageNum * fetchSize;
+    const to = from + fetchSize - 1;
+
+    let req = supabase.from('recipes').select('*', { count: 'exact' });
+
+    // Server-side filters where possible
+    if (selectedFamilies.length === 1) {
+      req = req.eq('family', selectedFamilies[0]);
+    } else if (selectedFamilies.length > 1) {
+      req = req.in('family', selectedFamilies);
     }
-    if (selectedFamily !== 'All') {
-      req = req.eq('family', selectedFamily);
+    if (selectedCuisines.length === 1) {
+      req = req.eq('cuisine', selectedCuisines[0]);
+    } else if (selectedCuisines.length > 1) {
+      req = req.in('cuisine', selectedCuisines);
     }
-    if (selectedCuisine !== 'All') {
-      req = req.eq('cuisine', selectedCuisine);
+    // Categories is a JSONB array - filter with contains for single, client-side for multi
+    if (selectedCategories.length === 1) {
+      req = req.contains('categories', [selectedCategories[0]]);
     }
 
-    const { data } = await req.order('title');
+    req = req.order('title').range(from, to);
+
+    const { data, count } = await req;
     let results = data ?? [];
 
+    // Client-side filtering for things Supabase can't do efficiently
+    if (selectedCategories.length > 1) {
+      results = results.filter((r) =>
+        selectedCategories.some((cat) => (r.categories ?? []).includes(cat))
+      );
+    }
+
     // Text search
-    if (query.trim()) {
-      const q = query.trim().toLowerCase();
+    if (debouncedQuery.trim()) {
+      const q = debouncedQuery.trim().toLowerCase();
       results = results.filter((r) => {
         if (r.title?.toLowerCase().includes(q)) return true;
         if (r.description?.toLowerCase().includes(q)) return true;
@@ -113,21 +157,23 @@ export default function BrowseScreen() {
     }
 
     // Cook time filter
-    if (selectedCookTime !== 'All') {
+    if (selectedCookTimes.length > 0) {
       results = results.filter((r) => {
         const total = (r.prep_time ?? 0) + (r.cook_time ?? 0);
         if (!total) return false;
-        if (selectedCookTime === 'quick') return total < 15;
-        if (selectedCookTime === 'medium') return total >= 15 && total <= 45;
-        if (selectedCookTime === 'long') return total > 45;
-        return true;
+        return selectedCookTimes.some((ct) => {
+          if (ct === 'quick') return total < 15;
+          if (ct === 'medium') return total >= 15 && total <= 45;
+          if (ct === 'long') return total > 45;
+          return false;
+        });
       });
     }
 
     // Dietary filter
     if (selectedDietary.length > 0) {
       results = results.filter((r) =>
-        selectedDietary.every((diet) =>
+        selectedDietary.some((diet) =>
           r.tags?.some((t: string) => t.toLowerCase() === diet)
         )
       );
@@ -140,52 +186,66 @@ export default function BrowseScreen() {
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         case 'oldest':
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-        case 'cooktime':
-          return ((a.prep_time ?? 0) + (a.cook_time ?? 0)) - ((b.prep_time ?? 0) + (b.cook_time ?? 0));
-        case 'calories':
-          return (a.estimated_calories ?? 9999) - (b.estimated_calories ?? 9999);
         default:
           return a.title.localeCompare(b.title);
       }
     });
 
-    setRecipes(results);
+    if (reset) {
+      setRecipes(results);
+    } else {
+      setRecipes((prev) => [...prev, ...results]);
+    }
+
+    const totalFromDb = count ?? 0;
+    if (reset) setTotalInDb(totalFromDb);
+    setHasMore(from + fetchSize < totalFromDb);
     setLoading(false);
+    setLoadingMore(false);
   }
 
-  function renderChipRow<T extends string>(
+  function loadMore() {
+    if (loadingMore || !hasMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchRecipes(nextPage, false);
+  }
+
+  function renderChipRow(
     label: string,
-    items: (T | { label: string; value: T })[],
-    selected: T,
-    onSelect: (val: T) => void,
+    items: (string | { label: string; value: string })[],
+    selected: string[],
+    onToggle: (val: string) => void,
   ) {
     return (
       <View style={styles.filterSection}>
         <Text style={styles.filterLabel}>{label}</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+        <View style={styles.chipWrap}>
           {items.map((item) => {
             const value = typeof item === 'string' ? item : item.value;
-            const label = typeof item === 'string' ? item : item.label;
+            const chipLabel = typeof item === 'string' ? item : item.label;
+            const isActive = selected.includes(value);
             return (
               <TouchableOpacity
                 key={value}
-                style={[styles.chip, selected === value && styles.chipActive]}
-                onPress={() => onSelect(value)}
+                style={[styles.chip, isActive && styles.chipActive]}
+                // @ts-ignore
+                dataSet={{ hover: 'chip' }}
+                onPress={() => onToggle(value)}
               >
-                <Text style={[styles.chipText, selected === value && styles.chipTextActive]}>
-                  {label}
+                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+                  {chipLabel}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.heading}>Browse Recipes</Text>
         <View style={styles.searchRow}>
@@ -198,65 +258,75 @@ export default function BrowseScreen() {
             onChangeText={setQuery}
             clearButtonMode="while-editing"
           />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery('')}>
+              <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Filter toggle button */}
-        <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggleRow}>
-          <Ionicons name="options-outline" size={20} color={showFilters ? Colors.primary : Colors.text} />
-          <Text style={[styles.filterToggleText, showFilters && { color: Colors.primary }]}>
-            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-          </Text>
-          <Ionicons name={showFilters ? 'chevron-up' : 'chevron-down'} size={16} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerControls}>
+          {/* Filter toggle */}
+          <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
+            <Ionicons name="options-outline" size={18} color={showFilters ? Colors.primary : Colors.text} />
+            <Text style={[styles.filterToggleText, showFilters && { color: Colors.primary }]}>
+              Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </TouchableOpacity>
 
-        {/* Sort row — always visible */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {SORT_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.chip, selectedSort === opt.value && styles.chipActive]}
-              onPress={() => setSelectedSort(opt.value)}
-            >
-              <Text style={[styles.chipText, selectedSort === opt.value && styles.chipTextActive]}>
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          {/* Sort chips inline */}
+          <View style={styles.sortRow}>
+            {SORT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
+                // @ts-ignore
+                dataSet={{ hover: 'chip' }}
+                onPress={() => setSelectedSort(opt.value)}
+              >
+                <Text style={[styles.sortChipText, selectedSort === opt.value && styles.sortChipTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
         {/* Expandable filters */}
         {showFilters && (
           <View style={styles.filtersPanel}>
-            {renderChipRow('Family', FAMILIES, selectedFamily as any, setSelectedFamily as any)}
-            {renderChipRow('Category', CATEGORIES, selectedCategory, setSelectedCategory)}
-            {renderChipRow('Cuisine', CUISINES, selectedCuisine, setSelectedCuisine)}
-            {renderChipRow('Cook Time', COOK_TIMES, selectedCookTime, setSelectedCookTime)}
+            {renderChipRow('Family', FAMILIES, selectedFamilies, (v) => setSelectedFamilies(toggleMulti(selectedFamilies, v)))}
+            {renderChipRow('Category', CATEGORIES, selectedCategories, (v) => setSelectedCategories(toggleMulti(selectedCategories, v)))}
+            {renderChipRow('Cuisine', CUISINES, selectedCuisines, (v) => setSelectedCuisines(toggleMulti(selectedCuisines, v)))}
+            {renderChipRow('Cook Time', COOK_TIMES, selectedCookTimes, (v) => setSelectedCookTimes(toggleMulti(selectedCookTimes, v)))}
 
             <View style={styles.filterSection}>
               <Text style={styles.filterLabel}>Dietary</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+              <View style={styles.chipWrap}>
                 {DIETARY_TAGS.map((tag) => (
                   <TouchableOpacity
                     key={tag}
                     style={[styles.chip, selectedDietary.includes(tag) && styles.chipActive]}
-                    onPress={() => toggleDietary(tag)}
+                    // @ts-ignore
+                    dataSet={{ hover: 'chip' }}
+                    onPress={() => setSelectedDietary(toggleMulti(selectedDietary, tag))}
                   >
                     <Text style={[styles.chipText, selectedDietary.includes(tag) && styles.chipTextActive]}>
                       {tag}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
             </View>
 
             {activeFilterCount > 0 && (
               <TouchableOpacity
                 style={styles.clearButton}
                 onPress={() => {
-                  setSelectedFamily('All');
-                  setSelectedCategory('All');
-                  setSelectedCuisine('All');
-                  setSelectedCookTime('All');
+                  setSelectedFamilies([]);
+                  setSelectedCategories([]);
+                  setSelectedCuisines([]);
+                  setSelectedCookTimes([]);
                   setSelectedDietary([]);
                 }}
               >
@@ -272,10 +342,26 @@ export default function BrowseScreen() {
         <ActivityIndicator style={styles.loader} color={Colors.primary} />
       ) : recipes.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No recipes found.</Text>
-          <TouchableOpacity onPress={() => router.push('/add-recipe')}>
-            <Text style={styles.emptyLink}>Add the first one →</Text>
-          </TouchableOpacity>
+          <Ionicons name="search-outline" size={48} color={Colors.textSecondary} />
+          <Text style={styles.emptyText}>
+            {totalInDb === 0 ? 'No recipes yet.' : 'No recipes match your filters.'}
+          </Text>
+          {totalInDb === 0 ? (
+            <TouchableOpacity onPress={() => router.push('/add-recipe')}>
+              <Text style={styles.emptyLink}>Add the first one</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => {
+              setSelectedFamilies([]);
+              setSelectedCategories([]);
+              setSelectedCuisines([]);
+              setSelectedCookTimes([]);
+              setSelectedDietary([]);
+              setQuery('');
+            }}>
+              <Text style={styles.emptyLink}>Clear all filters</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
@@ -283,36 +369,14 @@ export default function BrowseScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={styles.resultCount}>{recipes.length} recipe{recipes.length !== 1 ? 's' : ''}</Text>
+            <Text style={styles.resultCount}>{recipes.length} recipe{recipes.length !== 1 ? 's' : ''}{hasMore ? '+' : ''}</Text>
           }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => router.push(`/recipe/${item.id}`)}
-            >
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.cardImage} resizeMode="cover" />
-              ) : (
-                <View style={[styles.cardImage, styles.imagePlaceholder]} />
-              )}
-              <View style={styles.cardInfo}>
-                <View style={styles.cardTitleRow}>
-                  <FamilyBadge family={item.family} size={20} />
-                  <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-                </View>
-                <Text style={styles.cardMeta}>{[item.category, item.cuisine].filter(Boolean).join(' · ')}</Text>
-                {(item.prep_time || item.cook_time) && (
-                  <Text style={styles.cardTime}>
-                    {((item.prep_time ?? 0) + (item.cook_time ?? 0))} min
-                    {item.estimated_calories ? ` · ${item.estimated_calories} cal` : ''}
-                  </Text>
-                )}
-                {item.tags?.length > 0 && (
-                  <Text style={styles.cardTags}>{item.tags.slice(0, 3).join(' · ')}</Text>
-                )}
-              </View>
-            </TouchableOpacity>
-          )}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? <ActivityIndicator style={{ paddingVertical: 16 }} color={Colors.primary} /> : null
+          }
+          renderItem={({ item }) => <RecipeCard recipe={item} />}
         />
       )}
     </View>
@@ -322,45 +386,61 @@ export default function BrowseScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 8,
     backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+    paddingHorizontal: 16,
   },
   heading: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: Colors.text,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
     backgroundColor: Colors.background,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: Colors.border,
     paddingHorizontal: 10,
-    marginBottom: 10,
+    height: 40,
   },
   searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, height: 40, fontSize: 15, color: Colors.text },
-  filterToggleRow: {
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text },
+  headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingBottom: 4,
+  },
+  filterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
   },
   filterToggleText: {
-    flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: Colors.text,
   },
+  sortRow: { flexDirection: 'row', gap: 6 },
+  sortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sortChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  sortChipText: { fontSize: 12, color: Colors.text, fontWeight: '500' },
+  sortChipTextActive: { color: '#FFF' },
   filtersPanel: {
     paddingBottom: 8,
     borderTopWidth: 1,
@@ -369,25 +449,24 @@ const styles = StyleSheet.create({
   },
   filterSection: { marginTop: 8 },
   filterLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: Colors.textSecondary,
-    paddingHorizontal: 16,
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  chips: { paddingHorizontal: 16, gap: 8, paddingBottom: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
     backgroundColor: Colors.background,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: 13, color: Colors.text, fontWeight: '500' },
+  chipText: { fontSize: 12, color: Colors.text, fontWeight: '500' },
   chipTextActive: { color: '#FFF' },
   clearButton: {
     alignSelf: 'center',
@@ -406,20 +485,4 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   list: { padding: 16, gap: 12 },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  cardImage: { width: 90, height: 90 },
-  imagePlaceholder: { backgroundColor: Colors.border },
-  cardInfo: { flex: 1, padding: 12, justifyContent: 'center', gap: 3 },
-  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  cardTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
-  cardMeta: { fontSize: 12, color: Colors.textSecondary },
-  cardTime: { fontSize: 11, color: Colors.textSecondary },
-  cardTags: { fontSize: 11, color: Colors.primary, marginTop: 2 },
 });

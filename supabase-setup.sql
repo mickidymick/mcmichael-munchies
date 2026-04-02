@@ -52,6 +52,23 @@ ALTER TABLE recipes ADD COLUMN IF NOT EXISTS prep_time INTEGER;
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS cook_time INTEGER;
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS servings INTEGER;
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS estimated_calories INTEGER;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- 5b. Migrate category (text) to categories (jsonb array)
+-- Run this once to convert existing data:
+--   UPDATE recipes SET categories = CASE
+--     WHEN category IS NOT NULL AND category != '' THEN jsonb_build_array(category)
+--     ELSE '[]'::jsonb
+--   END;
+-- Then drop the old column:
+--   ALTER TABLE recipes DROP COLUMN IF EXISTS category;
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS categories JSONB NOT NULL DEFAULT '[]'::jsonb;
+
+-- 5c. Valid values for cuisine
+-- CHECK constraint ensures only known values are stored
+ALTER TABLE recipes DROP CONSTRAINT IF EXISTS recipes_cuisine_check;
+ALTER TABLE recipes ADD CONSTRAINT recipes_cuisine_check
+  CHECK (cuisine IN ('American', 'Italian', 'Mexican', 'Japanese', 'Chinese', 'Indian', 'Comfort Food', 'Other', ''));
 
 -- 6. RLS policies on profiles
 CREATE POLICY "Profiles are viewable by everyone"
@@ -83,3 +100,23 @@ CREATE POLICY "Members can delete any recipe"
   ON recipes FOR DELETE USING (
     (SELECT role FROM profiles WHERE id = auth.uid()) IN ('member', 'admin')
   );
+
+-- 7. Review queue for bulk-imported recipes
+CREATE TABLE IF NOT EXISTS review_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, recipe_id)
+);
+
+ALTER TABLE review_queue ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own review queue"
+  ON review_queue FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert into their own review queue"
+  ON review_queue FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete from their own review queue"
+  ON review_queue FOR DELETE USING (auth.uid() = user_id);

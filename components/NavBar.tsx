@@ -8,14 +8,14 @@ import {
 } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../constants/colors';
+import { Colors, Layout } from '../constants/colors';
 import { useUserRole } from '../lib/useUserRole';
 
 const NAV_LINKS = [
-  { label: 'Home', href: '/(tabs)/', icon: 'home-outline' as const },
-  { label: 'Browse', href: '/(tabs)/browse', icon: 'search-outline' as const },
-  { label: 'Favorites', href: '/(tabs)/favorites', icon: 'heart-outline' as const },
-  { label: 'Profile', href: '/(tabs)/profile', icon: 'person-outline' as const },
+  { label: 'Home', href: '/(tabs)/', match: (p: string) => p === '/' || p === '/(tabs)' || p === '/(tabs)/' },
+  { label: 'Browse', href: '/(tabs)/browse', match: (p: string) => p.startsWith('/browse') },
+  { label: 'Favorites', href: '/(tabs)/favorites', match: (p: string) => p.startsWith('/favorites') },
+  { label: 'Profile', href: '/(tabs)/profile', match: (p: string) => p.startsWith('/profile') },
 ];
 
 export default function NavBar() {
@@ -33,18 +33,20 @@ export default function NavBar() {
             source={require('../assets/logo.png')}
             style={styles.logo}
             resizeMode="contain"
+            accessibilityLabel="McMichael Munchies home"
           />
         </TouchableOpacity>
 
         <View style={styles.links}>
           {NAV_LINKS.map((link) => {
-            const isActive = pathname === link.href ||
-              (link.href !== '/(tabs)/' && pathname.startsWith(link.href));
+            const isActive = link.match(pathname);
             return (
               <TouchableOpacity
                 key={link.label}
                 style={[styles.link, isActive && styles.linkActive]}
                 onPress={() => router.push(link.href as any)}
+                // @ts-ignore
+                dataSet={{ hover: 'nav' }}
               >
                 <Text style={[styles.linkText, isActive && styles.linkTextActive]}>
                   {link.label}
@@ -55,13 +57,26 @@ export default function NavBar() {
         </View>
 
         {isMemberOrAdmin && (
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => router.push('/add-recipe')}
-          >
-            <Ionicons name="add" size={18} color="#fff" />
-            <Text style={styles.addBtnText}>Add Recipe</Text>
-          </TouchableOpacity>
+          <View style={styles.actionBtns}>
+            <TouchableOpacity
+              style={styles.bulkBtn}
+              onPress={() => router.push('/bulk-import')}
+              // @ts-ignore
+              dataSet={{ hover: 'btn' }}
+            >
+              <Ionicons name="documents-outline" size={16} color={Colors.primary} />
+              <Text style={styles.bulkBtnText}>Bulk Import</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => router.push('/add-recipe')}
+              // @ts-ignore
+              dataSet={{ hover: 'btn' }}
+            >
+              <Ionicons name="add" size={18} color="#fff" />
+              <Text style={styles.addBtnText}>Add Recipe</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </View>
@@ -80,11 +95,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    maxWidth: 1100,
+    maxWidth: Layout.maxWidth,
     width: '100%',
     alignSelf: 'center',
   },
-  logo: { height: 48, width: 160 },
+  logo: { height: 56, width: 190 },
   links: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   link: {
     paddingHorizontal: 16,
@@ -94,6 +109,18 @@ const styles = StyleSheet.create({
   linkActive: { backgroundColor: Colors.secondary },
   linkText: { fontSize: 15, fontWeight: '500', color: Colors.text },
   linkTextActive: { color: Colors.primary, fontWeight: '700' },
+  actionBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  bulkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  bulkBtnText: { color: Colors.primary, fontWeight: '600', fontSize: 14 },
   addBtn: {
     flexDirection: 'row',
     alignItems: 'center',

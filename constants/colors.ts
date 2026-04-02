@@ -13,4 +13,12 @@ export const Colors = {
   tabBarActive: '#c47c30',
   tabBarInactive: '#aaaaaa',
   footer: '#fff2e1',
+  danger: '#E74C3C',
+  codeBg: '#1e1e1e',
+  codeText: '#d4d4d4',
+  overlayDark: '#2a2a2a',
+};
+
+export const Layout = {
+  maxWidth: 960,
 };

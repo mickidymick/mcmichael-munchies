@@ -6,14 +6,16 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Animated,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+
+const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Colors } from '../../constants/colors';
+import { useEffect, useRef, useState } from 'react';
+import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
 import { useUserRole } from '../../lib/useUserRole';
 import FamilyBadge from '../../components/FamilyBadge';
@@ -24,8 +26,17 @@ const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
 
 const CATEGORIES: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: "Zach's Favorites", icon: 'heart-outline' },
+  { label: 'Breakfast', icon: 'sunny-outline' },
   { label: 'All things Sourdough', icon: 'leaf-outline' },
   { label: 'Pizza', icon: 'pizza-outline' },
+  { label: 'Beef', icon: 'flame-outline' },
+  { label: 'Chicken', icon: 'egg-outline' },
+  { label: 'Pork', icon: 'bonfire-outline' },
+  { label: 'Seafood', icon: 'fish-outline' },
+  { label: 'Soups, Stews & Chili', icon: 'water-outline' },
+  { label: 'Vegetables', icon: 'nutrition-outline' },
+  { label: 'Pasta & Rice', icon: 'grid-outline' },
+  { label: 'Sauces, Dips & Dressings', icon: 'color-filter-outline' },
   { label: 'Desserts', icon: 'ice-cream-outline' },
   { label: 'Quick & Easy', icon: 'timer-outline' },
   { label: 'The Wok', icon: 'flame-outline' },
@@ -34,13 +45,16 @@ const CATEGORIES: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
 export default function HomeScreen() {
   const router = useRouter();
   const { isMemberOrAdmin } = useUserRole();
-  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [carouselRecipes, setCarouselRecipes] = useState<Recipe[]>([]);
   const [recentRecipes, setRecentRecipes] = useState<Recipe[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const scrollX = useRef(new Animated.Value(0)).current;
   const scrollRef = useRef<ScrollView>(null);
   const scrollPos = useRef(0);
+  const hoveringRef = useRef(false);
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState(false);
 
   const CARD_GAP = 8;
   const CARD_WIDTH = (width - 32 - CARD_GAP * 2) / 3;
@@ -50,22 +64,33 @@ export default function HomeScreen() {
   }, []);
 
   async function loadRecipes() {
-    const { data, count } = await supabase
-      .from('recipes')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
-    if (data) {
-      setAllRecipes(data);
-      setRecentRecipes(data.slice(0, 6));
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [countRes, recentRes, carouselRes] = await Promise.all([
+        supabase.from('recipes').select('*', { count: 'exact', head: true }),
+        supabase.from('recipes').select('*').order('created_at', { ascending: false }).limit(6),
+        supabase.from('recipes').select('id, title, description, image_url, family, categories, cuisine, prep_time, cook_time').order('created_at', { ascending: false }).limit(20),
+      ]);
+      if (countRes.error && recentRes.error && carouselRes.error) {
+        setLoadError(true);
+      } else {
+        if (countRes.count !== null) setTotalCount(countRes.count);
+        if (recentRes.data) setRecentRecipes(recentRes.data);
+        if (carouselRes.data) setCarouselRecipes(carouselRes.data as any);
+      }
+    } catch {
+      setLoadError(true);
     }
-    if (count !== null) setTotalCount(count);
+    setLoading(false);
   }
 
-  // Auto-scroll: slowly shift left, loop when past the first set
+  // Auto-scroll carousel, pause on hover
   useEffect(() => {
-    if (allRecipes.length < 2) return;
-    const totalWidth = allRecipes.length * (CARD_WIDTH + CARD_GAP);
+    if (carouselRecipes.length < 2) return;
+    const totalWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
     const interval = setInterval(() => {
+      if (hoveringRef.current) return;
       scrollPos.current += 1;
       if (scrollPos.current >= totalWidth) {
         scrollPos.current = 0;
@@ -75,12 +100,19 @@ export default function HomeScreen() {
       }
     }, 30);
     return () => clearInterval(interval);
-  }, [allRecipes.length, CARD_WIDTH]);
+  }, [carouselRecipes.length, CARD_WIDTH]);
 
-  // Duplicate data for seamless looping
-  const carouselData = allRecipes.length >= 2
-    ? [...allRecipes, ...allRecipes]
-    : allRecipes;
+  const carouselData = carouselRecipes.length >= 2
+    ? [...carouselRecipes, ...carouselRecipes]
+    : carouselRecipes;
+
+  const cardHoverProps = (index: number) =>
+    Platform.OS === 'web'
+      ? {
+          onMouseEnter: () => { hoveringRef.current = true; setHoveredCard(index); },
+          onMouseLeave: () => { hoveringRef.current = false; setHoveredCard(null); },
+        }
+      : {};
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -149,7 +181,11 @@ export default function HomeScreen() {
       )}
 
       {/* Auto-scrolling Carousel */}
-      {allRecipes.length > 0 ? (
+      {loading ? (
+        <View style={styles.carouselLoading}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : carouselRecipes.length > 0 ? (
         <ScrollView
           ref={scrollRef}
           horizontal
@@ -161,33 +197,62 @@ export default function HomeScreen() {
           {carouselData.map((item, index) => (
             <TouchableOpacity
               key={`${item.id}-${index}`}
-              style={[styles.carouselCard, { width: CARD_WIDTH, marginRight: CARD_GAP }]}
+              style={[
+                styles.carouselCard,
+                { width: CARD_WIDTH, marginRight: CARD_GAP },
+                hoveredCard === index && styles.carouselCardHovered,
+              ]}
               onPress={() => router.push(`/recipe/${item.id}`)}
               activeOpacity={0.85}
+              {...cardHoverProps(index)}
             >
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.carouselCardImage} resizeMode="cover" />
-              ) : (
-                <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
-                  <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
+                {item.image_url ? (
+                  <Image source={{ uri: item.image_url }} style={styles.carouselCardImage} resizeMode="cover" accessibilityLabel={`Photo of ${item.title}`} />
+                ) : (
+                  <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
+                    <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
+                  </View>
+                )}
+                {item.family && (
+                  <View style={styles.carouselBadge}>
+                    <FamilyBadge family={item.family} size={26} />
+                  </View>
+                )}
+                <View style={[styles.carouselCardOverlay, hoveredCard === index && styles.carouselCardOverlayExpanded]}>
+                  <Text style={styles.carouselCardTitle} numberOfLines={hoveredCard === index ? 2 : 1}>{item.title}</Text>
+                  {hoveredCard === index && (
+                    <>
+                      {((item as any).categories?.length > 0 || (item as any).cuisine) && (
+                        <Text style={styles.carouselCardMeta} numberOfLines={1}>
+                          {[...((item as any).categories ?? []), (item as any).cuisine].filter(Boolean).join(' · ')}
+                        </Text>
+                      )}
+                      {((item as any).prep_time || (item as any).cook_time) && (
+                        <Text style={styles.carouselCardMeta}>
+                          {((item as any).prep_time ?? 0) + ((item as any).cook_time ?? 0)} min total
+                        </Text>
+                      )}
+                      {(item as any).description ? (
+                        <Text style={styles.carouselCardDesc} numberOfLines={3}>{(item as any).description}</Text>
+                      ) : null}
+                    </>
+                  )}
                 </View>
-              )}
-              {item.family && (
-                <View style={styles.carouselBadge}>
-                  <FamilyBadge family={item.family} size={26} />
-                </View>
-              )}
-              <View style={styles.carouselCardOverlay}>
-                <Text style={styles.carouselCardTitle} numberOfLines={1}>{item.title}</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
       ) : (
         <View style={styles.carouselPlaceholderContainer}>
           <Ionicons name="restaurant-outline" size={40} color={Colors.textSecondary} />
           <Text style={styles.placeholderText}>Add some recipes to see them here!</Text>
         </View>
+      )}
+
+      {loadError && (
+        <TouchableOpacity style={styles.errorBanner} onPress={loadRecipes}>
+          <Ionicons name="cloud-offline-outline" size={18} color={Colors.danger} />
+          <Text style={styles.errorBannerText}>Failed to load recipes. Tap to retry.</Text>
+        </TouchableOpacity>
       )}
 
       {/* Intro */}
@@ -228,6 +293,8 @@ export default function HomeScreen() {
                 key={fam}
                 style={styles.familyButton}
                 onPress={() => router.push({ pathname: '/browse', params: { family: fam } })}
+                // @ts-ignore
+                dataSet={{ hover: 'family' }}
               >
                 <Ionicons name="people-outline" size={22} color={Colors.primary} />
                 <Text style={styles.familyButtonText}>{fam}</Text>
@@ -238,19 +305,21 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Categories */}
+      {/* Categories - compact chip style */}
       <View style={styles.section}>
         <View style={styles.contentWrap}>
           <Text style={styles.sectionTitle}>Explore by Category</Text>
-          <View style={styles.categoryGrid}>
+          <View style={styles.categoryChipGrid}>
             {CATEGORIES.map((cat) => (
               <TouchableOpacity
                 key={cat.label}
-                style={styles.categoryCard}
+                style={styles.categoryChip}
                 onPress={() => router.push({ pathname: '/browse', params: { category: cat.label } })}
+                // @ts-ignore
+                dataSet={{ hover: 'catChip' }}
               >
-                <Ionicons name={cat.icon} size={24} color={Colors.primary} style={styles.categoryIcon} />
-                <Text style={styles.categoryLabel}>{cat.label}</Text>
+                <Ionicons name={cat.icon} size={16} color={Colors.primary} />
+                <Text style={styles.categoryChipLabel}>{cat.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -268,9 +337,11 @@ export default function HomeScreen() {
                   key={recipe.id}
                   style={styles.recipeCard}
                   onPress={() => router.push(`/recipe/${recipe.id}`)}
+                  // @ts-ignore
+                  dataSet={{ hover: 'card' }}
                 >
                   {recipe.image_url ? (
-                    <Image source={{ uri: recipe.image_url }} style={styles.recipeCardImage} />
+                    <Image source={{ uri: recipe.image_url }} style={styles.recipeCardImage} accessibilityLabel={`Photo of ${recipe.title}`} />
                   ) : (
                     <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
                       <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
@@ -282,7 +353,7 @@ export default function HomeScreen() {
                       <Text style={styles.recipeCardTitle} numberOfLines={2}>{recipe.title}</Text>
                     </View>
                     <Text style={styles.recipeCardMeta} numberOfLines={1}>
-                      {[recipe.category, recipe.cuisine].filter(Boolean).join(' · ')}
+                      {[...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -291,6 +362,8 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/browse')}
+              // @ts-ignore
+              dataSet={{ hover: 'btn' }}
             >
               <Text style={styles.viewAllText}>View All Recipes</Text>
               <Ionicons name="arrow-forward" size={18} color={Colors.primary} />
@@ -300,7 +373,7 @@ export default function HomeScreen() {
       )}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 McMichael Munchies. Recipes from our home to yours.</Text>
+        <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
       </View>
     </ScrollView>
   );
@@ -308,9 +381,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  contentWrap: { width: '100%', maxWidth: 900, alignSelf: 'center' },
+  contentWrap: { width: '100%', maxWidth: Layout.maxWidth, alignSelf: 'center' },
   header: {
-    paddingTop: 60,
+    paddingTop: HEADER_TOP,
     paddingBottom: 12,
     paddingHorizontal: 20,
     backgroundColor: Colors.surface,
@@ -342,9 +415,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
-  webSearchRow: { maxWidth: 900, width: '100%' },
+  webSearchRow: { maxWidth: Layout.maxWidth, width: '100%' },
 
-  // Auto-scrolling carousel
+  // Carousel
+  carouselLoading: {
+    height: 220,
+    backgroundColor: Colors.overlayDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
   carouselStrip: { marginTop: 12 },
   carouselStripContent: { paddingHorizontal: 16 },
   carouselCard: {
@@ -352,6 +432,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
+  },
+  carouselCardHovered: {
+    transform: [{ scale: 1.12 }],
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 10,
   },
   carouselCardImage: { width: '100%', height: '100%' },
   carouselCardPlaceholder: {
@@ -369,7 +458,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   carouselBadge: { position: 'absolute', top: 8, right: 8, zIndex: 2 },
+  carouselCardOverlayExpanded: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    gap: 3,
+  },
   carouselCardTitle: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+  carouselCardMeta: { color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '500' },
+  carouselCardDesc: { color: 'rgba(255,255,255,0.85)', fontSize: 11, lineHeight: 15, marginTop: 2 },
   carouselPlaceholderContainer: {
     height: 220,
     backgroundColor: Colors.secondary,
@@ -378,6 +474,19 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   placeholderText: { color: Colors.textSecondary, fontSize: 15 },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#fdecea',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 10,
+  },
+  errorBannerText: { fontSize: 14, color: Colors.danger, fontWeight: '500' },
 
   // Intro
   intro: { paddingHorizontal: 20, paddingVertical: 24, alignItems: 'center' },
@@ -435,7 +544,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderWidth: 1,
     borderColor: Colors.primary,
-    marginBottom: 0,
   },
   familyButtonText: {
     flex: 1,
@@ -444,27 +552,25 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  // Category grid
-  categoryGrid: {
+  // Category chips - compact
+  categoryChipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-  },
-  categoryCard: {
-    width: '47%',
-    backgroundColor: Colors.secondary,
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
   },
-  categoryIcon: { marginBottom: 2 },
-  categoryLabel: {
-    fontSize: 14,
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.secondary,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  categoryChipLabel: {
+    fontSize: 13,
     fontWeight: '600',
     color: Colors.text,
-    textAlign: 'center',
   },
 
   // Recipe grid
@@ -474,7 +580,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   recipeCard: {
-    width: '47%',
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: 150,
+    maxWidth: '48.5%',
     backgroundColor: Colors.surface,
     borderRadius: 12,
     overflow: 'hidden',

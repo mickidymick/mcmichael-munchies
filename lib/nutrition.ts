@@ -82,20 +82,37 @@ async function lookupCaloriesPer100g(ingredientName: string): Promise<number | n
   }
 }
 
+// Run up to N promises concurrently
+async function parallelLimit<T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> {
+  const results: T[] = [];
+  let i = 0;
+  async function next(): Promise<void> {
+    const idx = i++;
+    if (idx >= tasks.length) return;
+    results[idx] = await tasks[idx]();
+    await next();
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => next()));
+  return results;
+}
+
 export async function estimateCalories(ingredients: Ingredient[]): Promise<number | null> {
   if (!API_KEY || ingredients.length === 0) return null;
+
+  const validIngs = ingredients.filter((ing) => ing.item.trim());
+  if (validIngs.length === 0) return null;
+
+  const lookups = validIngs.map((ing) => () => lookupCaloriesPer100g(ing.item));
+  const results = await parallelLimit(lookups, 3);
 
   let totalCalories = 0;
   let matchedAny = false;
 
-  for (const ing of ingredients) {
-    if (!ing.item.trim()) continue;
-
-    const calPer100g = await lookupCaloriesPer100g(ing.item);
+  for (let i = 0; i < validIngs.length; i++) {
+    const calPer100g = results[i];
     if (calPer100g == null) continue;
-
     matchedAny = true;
-    const grams = estimateGrams(ing.amount, ing.unit);
+    const grams = estimateGrams(validIngs[i].amount, validIngs[i].unit);
     totalCalories += (calPer100g / 100) * grams;
   }
 

@@ -10,11 +10,12 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 import FamilyBadge from '../../components/FamilyBadge';
+import Tooltip from '../../components/Tooltip';
 import { useUserRole } from '../../lib/useUserRole';
 
 export default function RecipeDetailScreen() {
@@ -24,6 +25,12 @@ export default function RecipeDetailScreen() {
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [error, setError] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadRecipe();
@@ -31,7 +38,9 @@ export default function RecipeDetailScreen() {
   }, [id]);
 
   async function loadRecipe() {
-    const { data } = await supabase.from('recipes').select('*').eq('id', id).single();
+    setError(false);
+    const { data, error: err } = await supabase.from('recipes').select('*').eq('id', id).single();
+    if (err) { setError(true); setLoading(false); return; }
     setRecipe(data);
     setLoading(false);
   }
@@ -48,23 +57,11 @@ export default function RecipeDetailScreen() {
     setIsFavorite(!!data);
   }
 
-  async function handleDelete() {
-    const confirmed = Platform.OS === 'web'
-      ? window.confirm('Are you sure you want to delete this recipe? This cannot be undone.')
-      : await new Promise<boolean>((resolve) =>
-          Alert.alert(
-            'Delete Recipe',
-            'Are you sure you want to delete this recipe? This cannot be undone.',
-            [
-              { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Delete', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          )
-        );
-
-    if (!confirmed) return;
+  async function confirmDelete() {
+    setDeleting(true);
     const { error } = await supabase.from('recipes').delete().eq('id', id);
-    if (error) { Alert.alert('Error', error.message); return; }
+    setDeleting(false);
+    if (error) { Alert.alert('Error', error.message); setShowDeleteConfirm(false); return; }
     router.replace('/(tabs)');
   }
 
@@ -84,23 +81,101 @@ export default function RecipeDetailScreen() {
     setIsFavorite(!isFavorite);
   }
 
+  async function handleCopyLink() {
+    if (Platform.OS === 'web') {
+      await navigator.clipboard.writeText(window.location.href);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  }
+
+  function esc(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function handlePrint() {
+    if (Platform.OS !== 'web' || !recipe) return;
+    const title = esc(recipe.title);
+    const meta = [recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter((s): s is string => !!s).map(esc).join(' &middot; ');
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 40px 20px; color: #333; }
+  h1 { margin-bottom: 4px; }
+  .meta { color: #777; font-size: 14px; margin-bottom: 16px; }
+  .info { display: flex; gap: 24px; margin-bottom: 16px; padding: 12px; background: #f9f6f1; border-radius: 8px; }
+  .info div { text-align: center; }
+  .info .label { font-size: 11px; color: #999; text-transform: uppercase; }
+  .info .value { font-size: 16px; font-weight: bold; }
+  .notes { background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-style: italic; }
+  h2 { border-bottom: 2px solid #c47c30; padding-bottom: 6px; margin-top: 24px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; line-height: 1.5; }
+  ol li { margin-bottom: 12px; line-height: 1.6; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<h1>${title}</h1>
+<div class="meta">${meta}</div>
+${recipe.description ? `<p>${esc(recipe.description)}</p>` : ''}
+${(recipe.prep_time || recipe.cook_time || recipe.servings) ? `<div class="info">
+  ${recipe.prep_time != null ? `<div><div class="label">Prep</div><div class="value">${recipe.prep_time} min</div></div>` : ''}
+  ${recipe.cook_time != null ? `<div><div class="label">Cook</div><div class="value">${recipe.cook_time} min</div></div>` : ''}
+  ${recipe.servings != null ? `<div><div class="label">Servings</div><div class="value">${recipe.servings}</div></div>` : ''}
+</div>` : ''}
+${recipe.notes ? `<div class="notes">${esc(recipe.notes)}</div>` : ''}
+${recipe.ingredients?.length ? `<h2>Ingredients</h2><ul>${recipe.ingredients.map((ing) =>
+  `<li>${[ing.amount, ing.unit, ing.item].filter(Boolean).map(esc).join(' ')}</li>`
+).join('')}</ul>` : ''}
+${recipe.steps?.length ? `<h2>Instructions</h2><ol>${recipe.steps
+  .sort((a, b) => a.order - b.order)
+  .map((s) => `<li>${esc(s.instruction)}</li>`).join('')}</ol>` : ''}
+</body></html>`;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
+    } else {
+      Alert.alert(
+        'Popup blocked',
+        'Your browser blocked the print window. Please allow popups for this site and try again.'
+      );
+    }
+  }
+
   if (loading) {
     return <ActivityIndicator style={styles.loader} color={Colors.primary} />;
   }
 
-  if (!recipe) {
+  if (error || !recipe) {
     return (
       <View style={styles.loader}>
-        <Text style={{ color: Colors.textSecondary }}>Recipe not found.</Text>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
+        <Text style={{ color: Colors.textSecondary, fontSize: 16, marginTop: 12 }}>
+          {error ? 'Failed to load recipe.' : 'Recipe not found.'}
+        </Text>
+        <TouchableOpacity onPress={loadRecipe} style={{ marginTop: 12 }}>
+          <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 15 }}>Try again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={{ flex: 1 }}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      onScroll={(e) => setShowScrollTop(e.nativeEvent.contentOffset.y > 400)}
+      scrollEventThrottle={200}
+    >
       {/* Hero Image */}
       {recipe.image_url ? (
-        <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" />
+        <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
       ) : (
         <View style={[styles.heroImage, styles.heroPlaceholder]} />
       )}
@@ -113,28 +188,48 @@ export default function RecipeDetailScreen() {
             <Text style={styles.title}>{recipe.title}</Text>
           </View>
           <View style={styles.titleActions}>
-            {isMemberOrAdmin && (
+            {Platform.OS === 'web' && (
               <>
-                <TouchableOpacity onPress={() => router.push(`/edit-recipe/${recipe.id}`)} style={styles.editButton}>
-                  <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleDelete} style={styles.editButton}>
-                  <Ionicons name="trash-outline" size={20} color="#E74C3C" />
-                </TouchableOpacity>
+                <Tooltip label={linkCopied ? 'Copied!' : 'Copy link'}>
+                  <TouchableOpacity onPress={handleCopyLink} style={styles.actionButton}>
+                    <Ionicons name={linkCopied ? 'checkmark' : 'link-outline'} size={20} color={linkCopied ? Colors.primary : Colors.textSecondary} />
+                  </TouchableOpacity>
+                </Tooltip>
+                <Tooltip label="Print recipe">
+                  <TouchableOpacity onPress={handlePrint} style={styles.actionButton}>
+                    <Ionicons name="print-outline" size={20} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                </Tooltip>
               </>
             )}
-            <TouchableOpacity onPress={toggleFavorite} style={styles.favButton}>
-              <Ionicons
-                name={isFavorite ? 'heart' : 'heart-outline'}
+            {isMemberOrAdmin && (
+              <>
+                <Tooltip label="Edit recipe">
+                  <TouchableOpacity onPress={() => router.push(`/edit-recipe/${recipe.id}`)} style={styles.actionButton}>
+                    <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+                  </TouchableOpacity>
+                </Tooltip>
+                <Tooltip label="Delete recipe">
+                  <TouchableOpacity onPress={() => setShowDeleteConfirm(true)} style={styles.actionButton}>
+                    <Ionicons name="trash-outline" size={20} color={Colors.danger} />
+                  </TouchableOpacity>
+                </Tooltip>
+              </>
+            )}
+            <Tooltip label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+              <TouchableOpacity onPress={toggleFavorite} style={styles.favButton}>
+                <Ionicons
+                  name={isFavorite ? 'heart' : 'heart-outline'}
                 size={26}
                 color={isFavorite ? Colors.primary : Colors.textSecondary}
               />
             </TouchableOpacity>
+            </Tooltip>
           </View>
         </View>
 
         {/* Meta */}
-        <Text style={styles.meta}>{[recipe.family, recipe.category, recipe.cuisine].filter(Boolean).join(' · ')}</Text>
+        <Text style={styles.meta}>{[recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}</Text>
 
         {/* Time & Servings */}
         {(recipe.prep_time || recipe.cook_time || recipe.servings || recipe.estimated_calories) && (
@@ -187,6 +282,13 @@ export default function RecipeDetailScreen() {
           <Text style={styles.description}>{recipe.description}</Text>
         ) : null}
 
+        {recipe.notes ? (
+          <View style={styles.notesBox}>
+            <Ionicons name="document-text-outline" size={16} color={Colors.primary} />
+            <Text style={styles.notesText}>{recipe.notes}</Text>
+          </View>
+        ) : null}
+
         {/* Ingredients */}
         {recipe.ingredients?.length > 0 && (
           <View style={styles.section}>
@@ -225,6 +327,48 @@ export default function RecipeDetailScreen() {
         )}
       </View>
     </ScrollView>
+    {showScrollTop && (
+      <TouchableOpacity
+        style={styles.scrollTopBtn}
+        onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
+        // @ts-ignore
+        dataSet={{ hover: 'btn' }}
+      >
+        <Ionicons name="arrow-up" size={18} color="#FFF" />
+      </TouchableOpacity>
+    )}
+    {showDeleteConfirm && (
+      <View style={styles.deleteOverlay}>
+        <View style={styles.deleteModal}>
+          <Ionicons name="warning-outline" size={40} color={Colors.danger} />
+          <Text style={styles.deleteModalTitle}>Delete Recipe?</Text>
+          <Text style={styles.deleteModalText}>
+            This will permanently delete "{recipe.title}". This cannot be undone.
+          </Text>
+          <View style={styles.deleteModalButtons}>
+            <TouchableOpacity
+              style={styles.deleteModalCancel}
+              onPress={() => setShowDeleteConfirm(false)}
+              disabled={deleting}
+            >
+              <Text style={styles.deleteModalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteModalConfirm}
+              onPress={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.deleteModalConfirmText}>Delete</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    )}
+    </View>
   );
 }
 
@@ -244,7 +388,7 @@ const styles = StyleSheet.create({
   titleWithBadge: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
   title: { flex: 1, fontSize: 26, fontWeight: '800', color: Colors.text, lineHeight: 32 },
   titleActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 4 },
-  editButton: { padding: 4 },
+  actionButton: { padding: 4 },
   favButton: {},
   meta: { fontSize: 13, color: Colors.textSecondary, marginBottom: 10 },
   infoBar: {
@@ -273,6 +417,21 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: 23,
     marginBottom: 20,
+  },
+  notesBox: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: Colors.secondary,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 20,
+  },
+  notesText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.text,
+    lineHeight: 21,
+    fontStyle: 'italic',
   },
   section: { marginTop: 8, marginBottom: 20 },
   sectionTitle: {
@@ -314,5 +473,61 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 10,
     alignSelf: 'center',
+  },
+  deleteOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
+  },
+  deleteModal: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center',
+    maxWidth: 360,
+    width: '90%',
+    gap: 8,
+  },
+  deleteModalTitle: { fontSize: 20, fontWeight: '700', color: Colors.text, marginTop: 4 },
+  deleteModalText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 21 },
+  deleteModalButtons: { flexDirection: 'row', gap: 12, marginTop: 12, width: '100%' },
+  deleteModalCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+  },
+  deleteModalCancelText: { fontSize: 15, fontWeight: '600', color: Colors.text },
+  deleteModalConfirm: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.danger,
+    alignItems: 'center',
+  },
+  deleteModalConfirmText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+  scrollTopBtn: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 5,
   },
 });

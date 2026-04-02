@@ -11,18 +11,22 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import DraggableRow from '../../components/DraggableRow';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily } from '../../lib/supabase';
+import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../../lib/autocomplete';
 import { estimateCalories } from '../../lib/nutrition';
 import { useUserRole } from '../../lib/useUserRole';
 
 const CATEGORIES = [
-  "Zach's Favorites", 'All things Sourdough', 'Pizza',
-  'Desserts', 'Quick & Easy', 'The Wok', 'Other',
+  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
+  'Beef', 'Chicken', 'Pork', 'Seafood',
+  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
+  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok', 'Other',
 ];
 
 const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
@@ -40,6 +44,7 @@ const CUISINES = [
 
 export default function EditRecipeScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [saving, setSaving] = useState(false);
@@ -47,7 +52,8 @@ export default function EditRecipeScreen() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [notes, setNotes] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [family, setFamily] = useState<RecipeFamily | ''>('');
   const [cuisine, setCuisine] = useState('');
   const [tagsInput, setTagsInput] = useState('');
@@ -60,17 +66,15 @@ export default function EditRecipeScreen() {
 
   const [unitDropdownIndex, setUnitDropdownIndex] = useState<number | null>(null);
 
+  // Track initial state for dirty checking
+  const initialStateRef = useRef<string>('');
+
   // Tags autocomplete
   const [allTags, setAllTags] = useState<string[]>([]);
   const [tagsFocused, setTagsFocused] = useState(false);
 
   useEffect(() => {
-    supabase.from('recipes').select('tags').then(({ data }) => {
-      if (!data) return;
-      const tagSet = new Set<string>();
-      data.forEach((r: { tags: string[] | null }) => (r.tags ?? []).forEach((t) => tagSet.add(t)));
-      setAllTags(Array.from(tagSet).sort());
-    });
+    getUniqueTags().then(setAllTags);
   }, []);
 
   const currentTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
@@ -79,7 +83,7 @@ export default function EditRecipeScreen() {
   const tagSuggestions = useMemo(() => {
     if (!currentPartial) return [];
     return allTags
-      .filter((t) => t.startsWith(currentPartial) && !currentTags.includes(t))
+      .filter((t) => t.includes(currentPartial) && !currentTags.includes(t))
       .slice(0, 6);
   }, [currentPartial, allTags, currentTags]);
 
@@ -94,23 +98,14 @@ export default function EditRecipeScreen() {
   const [ingredientFocusIndex, setIngredientFocusIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from('recipes').select('ingredients').then(({ data }) => {
-      if (!data) return;
-      const nameSet = new Set<string>();
-      data.forEach((r: { ingredients: Ingredient[] | null }) =>
-        (r.ingredients ?? []).forEach((ing) => {
-          if (ing.item?.trim()) nameSet.add(ing.item.trim().toLowerCase());
-        })
-      );
-      setAllIngredientNames(Array.from(nameSet).sort());
-    });
+    getUniqueIngredients().then(setAllIngredientNames);
   }, []);
 
   function getIngredientSuggestions(index: number) {
     const partial = ingredients[index]?.item?.trim().toLowerCase() ?? '';
     if (!partial) return [];
     return allIngredientNames
-      .filter((name) => name.startsWith(partial) && name !== partial)
+      .filter((name) => name.includes(partial) && name !== partial)
       .slice(0, 6);
   }
 
@@ -125,7 +120,13 @@ export default function EditRecipeScreen() {
       if (!data) return;
       setTitle(data.title);
       setDescription(data.description ?? '');
-      setCategory(data.category ?? '');
+      setNotes(data.notes ?? '');
+      // Support both old category (string) and new categories (array)
+      if (Array.isArray(data.categories) && data.categories.length > 0) {
+        setCategories(data.categories);
+      } else if (data.category) {
+        setCategories([data.category]);
+      }
       setFamily(data.family ?? '');
       setCuisine(data.cuisine ?? '');
       setTagsInput((data.tags ?? []).join(', '));
@@ -136,8 +137,82 @@ export default function EditRecipeScreen() {
       setIngredients(data.ingredients?.length ? data.ingredients : [{ amount: '', unit: '', item: '' }]);
       setSteps(data.steps?.length ? data.steps : [{ order: 1, instruction: '', image_url: undefined }]);
       setLoading(false);
+
+      // Snapshot initial state for dirty checking
+      initialStateRef.current = JSON.stringify({
+        title: data.title,
+        description: data.description ?? '',
+        notes: data.notes ?? '',
+        categories: Array.isArray(data.categories) ? data.categories : data.category ? [data.category] : [],
+        family: data.family ?? '',
+        cuisine: data.cuisine ?? '',
+        tags: (data.tags ?? []).join(', '),
+        prepTime: data.prep_time != null ? String(data.prep_time) : '',
+        cookTime: data.cook_time != null ? String(data.cook_time) : '',
+        servings: data.servings != null ? String(data.servings) : '',
+        heroImage: data.image_url ?? null,
+        ingredients: data.ingredients ?? [],
+        steps: data.steps ?? [],
+      });
     });
   }, [id]);
+
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    if (!initialStateRef.current) { dirtyRef.current = false; return; }
+    const current = JSON.stringify({
+      title, description, notes, categories, family, cuisine,
+      tags: tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps,
+    });
+    dirtyRef.current = current !== initialStateRef.current;
+  }, [title, description, notes, categories, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps]);
+
+  // Warn on browser tab close
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  // Warn on in-app navigation
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have unsaved changes. Discard them and leave?')) {
+          dirtyRef.current = false;
+          navigation.dispatch(e.data.action);
+        }
+      } else {
+        Alert.alert('Discard changes?', 'You have unsaved changes. Discard them and leave?', [
+          { text: 'Keep Editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => {
+            dirtyRef.current = false;
+            navigation.dispatch(e.data.action);
+          }},
+        ]);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // ─── Category multi-select ──────────────────────────────────────────────────
+
+  function toggleCategory(cat: string) {
+    setCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   function updateIngredient(index: number, field: keyof Ingredient, value: string) {
     setIngredients((prev) => prev.map((ing, i) => i === index ? { ...ing, [field]: value } : ing));
@@ -147,6 +222,15 @@ export default function EditRecipeScreen() {
   }
   function removeIngredient(index: number) {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
+  }
+  function moveIngredient(from: number, to: number) {
+    if (to < 0 || to >= ingredients.length) return;
+    setIngredients((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
   }
 
   function updateStep(index: number, value: string) {
@@ -160,6 +244,17 @@ export default function EditRecipeScreen() {
       prev.filter((_, i) => i !== index).map((s, i) => ({ ...s, order: i + 1 }))
     );
   }
+  function moveStep(from: number, to: number) {
+    if (to < 0 || to >= steps.length) return;
+    setSteps((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy.map((s, i) => ({ ...s, order: i + 1 }));
+    });
+  }
+
+  // ─── Images ──────────────────────────────────────────────────────────────────
 
   async function pickHeroImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -197,6 +292,8 @@ export default function EditRecipeScreen() {
     return data.publicUrl;
   }
 
+  // ─── Save ────────────────────────────────────────────────────────────────────
+
   async function handleSave() {
     if (!title.trim()) {
       Alert.alert('Title required', 'Please enter a recipe title.');
@@ -221,7 +318,8 @@ export default function EditRecipeScreen() {
     const { error } = await supabase.from('recipes').update({
       title: title.trim(),
       description: description.trim(),
-      category,
+      notes: notes.trim() || null,
+      categories,
       family: family || null,
       prep_time: prepTime ? parseInt(prepTime, 10) : null,
       cook_time: cookTime ? parseInt(cookTime, 10) : null,
@@ -236,8 +334,12 @@ export default function EditRecipeScreen() {
 
     setSaving(false);
     if (error) { Alert.alert('Error saving recipe', error.message); return; }
+    invalidateAutocompleteCache();
+    dirtyRef.current = false;
     router.replace(`/recipe/${id}`);
   }
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   if (loading || roleLoading) {
     return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
@@ -278,32 +380,38 @@ export default function EditRecipeScreen() {
         <Text style={styles.label}>Description</Text>
         <TextInput style={[styles.input, styles.multiline]} placeholder="A short description..." placeholderTextColor={Colors.textSecondary} value={description} onChangeText={setDescription} multiline numberOfLines={3} />
 
-        <Text style={styles.label}>Category</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        <Text style={styles.label}>Notes</Text>
+        <TextInput style={[styles.input, styles.multiline]} placeholder="Source, tips, variations, personal notes..." placeholderTextColor={Colors.textSecondary} value={notes} onChangeText={setNotes} multiline numberOfLines={3} />
+
+        <Text style={styles.label}>Categories</Text>
+        <View style={styles.chipWrap}>
           {CATEGORIES.map((c) => (
-            <TouchableOpacity key={c} style={[styles.chip, category === c && styles.chipActive]} onPress={() => setCategory(c)}>
-              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{c}</Text>
+            // @ts-ignore dataSet for web hover
+            <TouchableOpacity key={c} style={[styles.chip, categories.includes(c) && styles.chipActive]} onPress={() => toggleCategory(c)} dataSet={{ hover: 'chip' }}>
+              <Text style={[styles.chipText, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         <Text style={styles.label}>Family</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
-            <TouchableOpacity key={f} style={[styles.chip, family === f && styles.chipActive]} onPress={() => setFamily(family === f ? '' : f)}>
+            // @ts-ignore dataSet for web hover
+            <TouchableOpacity key={f} style={[styles.chip, family === f && styles.chipActive]} onPress={() => setFamily(family === f ? '' : f)} dataSet={{ hover: 'chip' }}>
               <Text style={[styles.chipText, family === f && styles.chipTextActive]}>{f}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         <Text style={styles.label}>Cuisine</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        <View style={styles.chipWrap}>
           {CUISINES.map((c) => (
-            <TouchableOpacity key={c} style={[styles.chip, cuisine === c && styles.chipActive]} onPress={() => setCuisine(c)}>
+            // @ts-ignore dataSet for web hover
+            <TouchableOpacity key={c} style={[styles.chip, cuisine === c && styles.chipActive]} onPress={() => setCuisine(c)} dataSet={{ hover: 'chip' }}>
               <Text style={[styles.chipText, cuisine === c && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Tags with autocomplete */}
         <Text style={styles.label}>Tags</Text>
@@ -327,11 +435,7 @@ export default function EditRecipeScreen() {
           {tagsFocused && tagSuggestions.length > 0 && (
             <View style={styles.suggestionsBox}>
               {tagSuggestions.map((tag) => (
-                <TouchableOpacity
-                  key={tag}
-                  style={styles.suggestionItem}
-                  onPress={() => acceptTag(tag)}
-                >
+                <TouchableOpacity key={tag} style={styles.suggestionItem} onPress={() => acceptTag(tag)}>
                   <Text style={styles.suggestionText}>{tag}</Text>
                 </TouchableOpacity>
               ))}
@@ -343,42 +447,33 @@ export default function EditRecipeScreen() {
         <View style={styles.timeRow}>
           <View style={styles.timeField}>
             <Text style={styles.label}>Prep Time (min)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 15"
-              placeholderTextColor={Colors.textSecondary}
-              value={prepTime}
-              onChangeText={setPrepTime}
-              keyboardType="numeric"
-            />
+            <TextInput style={styles.input} placeholder="e.g. 15" placeholderTextColor={Colors.textSecondary} value={prepTime} onChangeText={setPrepTime} keyboardType="numeric" />
           </View>
           <View style={styles.timeField}>
             <Text style={styles.label}>Cook Time (min)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 30"
-              placeholderTextColor={Colors.textSecondary}
-              value={cookTime}
-              onChangeText={setCookTime}
-              keyboardType="numeric"
-            />
+            <TextInput style={styles.input} placeholder="e.g. 30" placeholderTextColor={Colors.textSecondary} value={cookTime} onChangeText={setCookTime} keyboardType="numeric" />
           </View>
           <View style={styles.timeField}>
             <Text style={styles.label}>Servings</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. 4"
-              placeholderTextColor={Colors.textSecondary}
-              value={servings}
-              onChangeText={setServings}
-              keyboardType="numeric"
-            />
+            <TextInput style={styles.input} placeholder="e.g. 4" placeholderTextColor={Colors.textSecondary} value={servings} onChangeText={setServings} keyboardType="numeric" />
           </View>
         </View>
 
         <Text style={styles.sectionHeader}>Ingredients</Text>
         {ingredients.map((ing, i) => (
-          <View key={i} style={[styles.ingredientRow, (unitDropdownIndex === i || ingredientFocusIndex === i) && { zIndex: 100 }]}>
+          <DraggableRow
+            key={i}
+            index={i}
+            dragType="ingredient"
+            onReorder={moveIngredient}
+            style={[
+              styles.ingredientRow,
+              (unitDropdownIndex === i || ingredientFocusIndex === i) && { zIndex: 100 },
+            ]}
+          >
+            <View style={styles.dragHandle}>
+              <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+            </View>
             <TextInput style={[styles.input, styles.amountInput]} placeholder="Amt" placeholderTextColor={Colors.textSecondary} value={ing.amount} onChangeText={(v) => updateIngredient(i, 'amount', v)} />
             <View style={styles.unitWrapper}>
               <TouchableOpacity
@@ -431,11 +526,7 @@ export default function EditRecipeScreen() {
               {ingredientFocusIndex === i && getIngredientSuggestions(i).length > 0 && (
                 <View style={styles.ingredientSuggestions}>
                   {getIngredientSuggestions(i).map((name) => (
-                    <TouchableOpacity
-                      key={name}
-                      style={styles.suggestionItem}
-                      onPress={() => acceptIngredient(i, name)}
-                    >
+                    <TouchableOpacity key={name} style={styles.suggestionItem} onPress={() => acceptIngredient(i, name)}>
                       <Text style={styles.suggestionText}>{name}</Text>
                     </TouchableOpacity>
                   ))}
@@ -447,7 +538,7 @@ export default function EditRecipeScreen() {
                 <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             )}
-          </View>
+          </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addIngredient}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
@@ -456,9 +547,20 @@ export default function EditRecipeScreen() {
 
         <Text style={styles.sectionHeader}>Instructions</Text>
         {steps.map((step, i) => (
-          <View key={i} style={styles.stepBlock}>
+          <DraggableRow
+            key={i}
+            index={i}
+            dragType="step"
+            onReorder={moveStep}
+            style={styles.stepBlock}
+          >
             <View style={styles.stepHeader}>
-              <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{i + 1}</Text></View>
+              <View style={styles.stepHeaderLeft}>
+                <View style={styles.dragHandle}>
+                  <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+                </View>
+                <View style={styles.stepBadge}><Text style={styles.stepBadgeText}>{i + 1}</Text></View>
+              </View>
               {steps.length > 1 && (
                 <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeBtn}>
                   <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
@@ -474,14 +576,15 @@ export default function EditRecipeScreen() {
                 <Text style={styles.stepImageBtnText}>Add photo for this step</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addStep}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
           <Text style={styles.addRowText}>Add step</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+        {/* @ts-ignore */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} dataSet={{ hover: 'btn' }}>
           {saving ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
         </TouchableOpacity>
 
@@ -501,7 +604,7 @@ const styles = StyleSheet.create({
   sectionHeader: { fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 28, marginBottom: 12, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: Colors.primary },
   input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: Colors.text },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  chipScroll: { marginBottom: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, marginRight: 8, marginBottom: 8 },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: { fontSize: 13, color: Colors.text, fontWeight: '500' },
@@ -509,62 +612,29 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   timeField: { flex: 1 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' },
+  dragHandle: { padding: 4, cursor: 'grab' as any, opacity: 0.5 },
   amountInput: { width: 56 },
   unitWrapper: { position: 'relative', zIndex: 10 },
-  unitInput: {
-    width: 80,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 2,
-  },
+  unitInput: { width: 80, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 2 },
   unitText: { fontSize: 15, color: Colors.text },
   unitPlaceholder: { fontSize: 15, color: Colors.textSecondary },
   unitDropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    width: 120,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    marginTop: 4,
-    zIndex: 100,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    position: 'absolute', top: '100%', left: 0, right: 0, width: 120,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 8,
+    marginTop: 4, zIndex: 100, elevation: 5,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6,
   },
   unitDropdownScroll: { maxHeight: 200 },
-  unitOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
+  unitOption: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
   unitOptionActive: { backgroundColor: Colors.secondary },
   unitOptionText: { fontSize: 14, color: Colors.text },
   unitOptionTextActive: { color: Colors.primary, fontWeight: '600' },
   ingredientItemWrapper: { flex: 1, position: 'relative' },
   ingredientSuggestions: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    marginTop: 4,
-    zIndex: 100,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    position: 'absolute', top: '100%', left: 0, right: 0,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 8,
+    marginTop: 4, zIndex: 100, elevation: 5,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 6,
   },
   itemInput: { flex: 1 },
   removeBtn: { padding: 2 },
@@ -572,6 +642,7 @@ const styles = StyleSheet.create({
   addRowText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
   stepBlock: { backgroundColor: Colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: Colors.border, gap: 10 },
   stepHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stepHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stepBadge: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
   stepBadgeText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
   stepImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
@@ -579,19 +650,7 @@ const styles = StyleSheet.create({
   stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
   saveButton: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 32 },
   saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },
-  suggestionsBox: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    marginTop: 4,
-    overflow: 'hidden',
-  },
-  suggestionItem: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
+  suggestionsBox: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 8, marginTop: 4, overflow: 'hidden' },
+  suggestionItem: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: Colors.border },
   suggestionText: { fontSize: 14, color: Colors.text },
 });

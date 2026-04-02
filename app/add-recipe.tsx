@@ -11,18 +11,22 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useNavigation } from 'expo-router';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
+import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../lib/autocomplete';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
+import DraggableRow from '../components/DraggableRow';
 
 const CATEGORIES = [
-  "Zach's Favorites", 'All things Sourdough', 'Pizza',
-  'Desserts', 'Quick & Easy', 'The Wok', 'Other',
+  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
+  'Beef', 'Chicken', 'Pork', 'Seafood',
+  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
+  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok', 'Other',
 ];
 
 const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
@@ -40,13 +44,15 @@ const CUISINES = [
 
 export default function AddRecipeScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [saving, setSaving] = useState(false);
 
   // Basic fields
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
+  const [notes, setNotes] = useState('');
+  const [categories, setCategories] = useState<string[]>([]);
   const [family, setFamily] = useState<RecipeFamily | ''>('');
   const [cuisine, setCuisine] = useState('');
   const [tagsInput, setTagsInput] = useState('');
@@ -62,12 +68,7 @@ export default function AddRecipeScreen() {
   const [tagsFocused, setTagsFocused] = useState(false);
 
   useEffect(() => {
-    supabase.from('recipes').select('tags').then(({ data }) => {
-      if (!data) return;
-      const tagSet = new Set<string>();
-      data.forEach((r: { tags: string[] | null }) => (r.tags ?? []).forEach((t) => tagSet.add(t)));
-      setAllTags(Array.from(tagSet).sort());
-    });
+    getUniqueTags().then(setAllTags);
   }, []);
 
   const currentTags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
@@ -76,7 +77,7 @@ export default function AddRecipeScreen() {
   const tagSuggestions = useMemo(() => {
     if (!currentPartial) return [];
     return allTags
-      .filter((t) => t.startsWith(currentPartial) && !currentTags.includes(t))
+      .filter((t) => t.includes(currentPartial) && !currentTags.includes(t))
       .slice(0, 6);
   }, [currentPartial, allTags, currentTags]);
 
@@ -91,23 +92,14 @@ export default function AddRecipeScreen() {
   const [ingredientFocusIndex, setIngredientFocusIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    supabase.from('recipes').select('ingredients').then(({ data }) => {
-      if (!data) return;
-      const nameSet = new Set<string>();
-      data.forEach((r: { ingredients: Ingredient[] | null }) =>
-        (r.ingredients ?? []).forEach((ing) => {
-          if (ing.item?.trim()) nameSet.add(ing.item.trim().toLowerCase());
-        })
-      );
-      setAllIngredientNames(Array.from(nameSet).sort());
-    });
+    getUniqueIngredients().then(setAllIngredientNames);
   }, []);
 
   function getIngredientSuggestions(index: number) {
     const partial = ingredients[index]?.item?.trim().toLowerCase() ?? '';
     if (!partial) return [];
     return allIngredientNames
-      .filter((name) => name.startsWith(partial) && name !== partial)
+      .filter((name) => name.includes(partial) && name !== partial)
       .slice(0, 6);
   }
 
@@ -126,6 +118,63 @@ export default function AddRecipeScreen() {
     { order: 1, instruction: '', image_url: undefined },
   ]);
 
+  // ─── Unsaved changes warning ────────────────────────────────────────────────
+
+  const dirtyRef = useRef(false);
+
+  useEffect(() => {
+    dirtyRef.current = !!(
+      title.trim() || description.trim() || notes.trim() || categories.length > 0 ||
+      family || cuisine || tagsInput.trim() || prepTime || cookTime || servings || heroImage ||
+      ingredients.some((i) => i.item.trim()) ||
+      steps.some((s) => s.instruction.trim())
+    );
+  }, [title, description, notes, categories, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps]);
+
+  // Warn on browser tab close
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  // Warn on in-app navigation (back button, nav links)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (!dirtyRef.current) return;
+      e.preventDefault();
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have unsaved changes. Discard them and leave?')) {
+          dirtyRef.current = false;
+          navigation.dispatch(e.data.action);
+        }
+      } else {
+        Alert.alert('Discard changes?', 'You have unsaved changes. Discard them and leave?', [
+          { text: 'Keep Editing', style: 'cancel' },
+          { text: 'Discard', style: 'destructive', onPress: () => {
+            dirtyRef.current = false;
+            navigation.dispatch(e.data.action);
+          }},
+        ]);
+      }
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // ─── Category multi-select ──────────────────────────────────────────────────
+
+  function toggleCategory(cat: string) {
+    setCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
+
   // ─── Ingredient helpers ──────────────────────────────────────────────────────
 
   function updateIngredient(index: number, field: keyof Ingredient, value: string) {
@@ -138,6 +187,16 @@ export default function AddRecipeScreen() {
 
   function removeIngredient(index: number) {
     setIngredients((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveIngredient(from: number, to: number) {
+    if (to < 0 || to >= ingredients.length) return;
+    setIngredients((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy;
+    });
   }
 
   // ─── Step helpers ────────────────────────────────────────────────────────────
@@ -154,6 +213,16 @@ export default function AddRecipeScreen() {
     setSteps((prev) =>
       prev.filter((_, i) => i !== index).map((s, i) => ({ ...s, order: i + 1 }))
     );
+  }
+
+  function moveStep(from: number, to: number) {
+    if (to < 0 || to >= steps.length) return;
+    setSteps((prev) => {
+      const copy = [...prev];
+      const [item] = copy.splice(from, 1);
+      copy.splice(to, 0, item);
+      return copy.map((s, i) => ({ ...s, order: i + 1 }));
+    });
   }
 
   // ─── Image helpers ───────────────────────────────────────────────────────────
@@ -242,7 +311,8 @@ export default function AddRecipeScreen() {
     const { data, error } = await supabase.from('recipes').insert({
       title: title.trim(),
       description: description.trim(),
-      category,
+      notes: notes.trim() || null,
+      categories,
       family: family || null,
       prep_time: prepTime ? parseInt(prepTime, 10) : null,
       cook_time: cookTime ? parseInt(cookTime, 10) : null,
@@ -259,6 +329,8 @@ export default function AddRecipeScreen() {
     setSaving(false);
 
     if (error) { Alert.alert('Error saving recipe', error.message); return; }
+    invalidateAutocompleteCache();
+    dirtyRef.current = false;
     router.replace(`/recipe/${data.id}`);
   }
 
@@ -323,47 +395,65 @@ export default function AddRecipeScreen() {
           numberOfLines={3}
         />
 
-        {/* Category */}
-        <Text style={styles.label}>Category</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        {/* Notes */}
+        <Text style={styles.label}>Notes</Text>
+        <TextInput
+          style={[styles.input, styles.multiline]}
+          placeholder="Source, tips, variations, personal notes..."
+          placeholderTextColor={Colors.textSecondary}
+          value={notes}
+          onChangeText={setNotes}
+          multiline
+          numberOfLines={3}
+        />
+
+        {/* Category (multi-select) */}
+        <Text style={styles.label}>Categories</Text>
+        <View style={styles.chipWrap}>
           {CATEGORIES.map((c) => (
             <TouchableOpacity
               key={c}
-              style={[styles.chip, category === c && styles.chipActive]}
-              onPress={() => setCategory(c)}
+              style={[styles.chip, categories.includes(c) && styles.chipActive]}
+              onPress={() => toggleCategory(c)}
+              // @ts-ignore
+              dataSet={{ hover: 'chip' }}
             >
-              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{c}</Text>
+              <Text style={[styles.chipText, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Family */}
         <Text style={styles.label}>Family</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
             <TouchableOpacity
               key={f}
               style={[styles.chip, family === f && styles.chipActive]}
+              // @ts-ignore
+              dataSet={{ hover: 'chip' }}
               onPress={() => setFamily(family === f ? '' : f)}
             >
               <Text style={[styles.chipText, family === f && styles.chipTextActive]}>{f}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Cuisine */}
         <Text style={styles.label}>Cuisine</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+        <View style={styles.chipWrap}>
           {CUISINES.map((c) => (
             <TouchableOpacity
               key={c}
               style={[styles.chip, cuisine === c && styles.chipActive]}
               onPress={() => setCuisine(c)}
+              // @ts-ignore
+              dataSet={{ hover: 'chip' }}
             >
               <Text style={[styles.chipText, cuisine === c && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
 
         {/* Tags */}
         <Text style={styles.label}>Tags</Text>
@@ -439,7 +529,19 @@ export default function AddRecipeScreen() {
         {/* Ingredients */}
         <Text style={styles.sectionHeader}>Ingredients</Text>
         {ingredients.map((ing, i) => (
-          <View key={i} style={[styles.ingredientRow, (unitDropdownIndex === i || ingredientFocusIndex === i) && { zIndex: 100 }]}>
+          <DraggableRow
+            key={i}
+            index={i}
+            dragType="ingredient"
+            onReorder={moveIngredient}
+            style={[
+              styles.ingredientRow,
+              (unitDropdownIndex === i || ingredientFocusIndex === i) && { zIndex: 100 },
+            ]}
+          >
+            <View style={styles.dragHandle}>
+              <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+            </View>
             <TextInput
               style={[styles.input, styles.amountInput]}
               placeholder="Amt"
@@ -514,7 +616,7 @@ export default function AddRecipeScreen() {
                 <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
               </TouchableOpacity>
             )}
-          </View>
+          </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addIngredient}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
@@ -524,10 +626,21 @@ export default function AddRecipeScreen() {
         {/* Steps */}
         <Text style={styles.sectionHeader}>Instructions</Text>
         {steps.map((step, i) => (
-          <View key={i} style={styles.stepBlock}>
+          <DraggableRow
+            key={i}
+            index={i}
+            dragType="step"
+            onReorder={moveStep}
+            style={styles.stepBlock}
+          >
             <View style={styles.stepHeader}>
-              <View style={styles.stepBadge}>
-                <Text style={styles.stepBadgeText}>{i + 1}</Text>
+              <View style={styles.stepHeaderLeft}>
+                <View style={styles.dragHandle}>
+                  <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+                </View>
+                <View style={styles.stepBadge}>
+                  <Text style={styles.stepBadgeText}>{i + 1}</Text>
+                </View>
               </View>
               {steps.length > 1 && (
                 <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeBtn}>
@@ -552,7 +665,7 @@ export default function AddRecipeScreen() {
                 <Text style={styles.stepImageBtnText}>Add photo for this step</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addStep}>
           <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
@@ -560,7 +673,8 @@ export default function AddRecipeScreen() {
         </TouchableOpacity>
 
         {/* Save button */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+        {/* @ts-ignore */}
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} dataSet={{ hover: 'btn' }}>
           {saving ? (
             <ActivityIndicator color="#FFF" />
           ) : (
@@ -612,7 +726,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   multiline: { minHeight: 80, textAlignVertical: 'top' },
-  chipScroll: { marginBottom: 4 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -629,6 +743,11 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   timeField: { flex: 1 },
   ingredientRow: { flexDirection: 'row', gap: 6, marginBottom: 8, alignItems: 'center' },
+  dragHandle: {
+    padding: 4,
+    cursor: 'grab' as any,
+    opacity: 0.5,
+  },
   amountInput: { width: 56 },
   unitWrapper: { position: 'relative', zIndex: 10 },
   unitInput: {
@@ -691,6 +810,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  stepHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   stepBadge: {
     width: 28,

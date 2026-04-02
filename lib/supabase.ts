@@ -14,8 +14,9 @@ export type Recipe = {
   id: string;
   title: string;
   description: string;
+  notes: string | null;
   image_url: string | null;
-  category: string;
+  categories: string[];
   cuisine: string;
   family: RecipeFamily | null;
   prep_time: number | null;
