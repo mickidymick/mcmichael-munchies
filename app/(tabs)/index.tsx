@@ -157,17 +157,21 @@ export default function HomeScreen() {
           scrollEnabled={true}
           style={styles.carouselStrip}
           contentContainerStyle={styles.carouselStripContent}
+          decelerationRate="normal"
           onScrollBeginDrag={() => {
             touchingRef.current = true;
             if (resumeTimer.current) clearTimeout(resumeTimer.current);
           }}
-          onScrollEndDrag={(e) => {
-            // Sync scroll position so auto-scroll continues from where user left off
+          onMomentumScrollEnd={(e) => {
+            // Sync position after momentum finishes so auto-scroll continues from here
             scrollPos.current = e.nativeEvent.contentOffset.x;
-            // Resume auto-scroll after 3 seconds of no interaction
             resumeTimer.current = setTimeout(() => {
               touchingRef.current = false;
             }, 3000);
+          }}
+          onScrollEndDrag={(e) => {
+            // Also sync on drag end in case there's no momentum
+            scrollPos.current = e.nativeEvent.contentOffset.x;
           }}
         >
           {carouselData.map((item, index) => (
