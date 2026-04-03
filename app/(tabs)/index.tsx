@@ -35,6 +35,8 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollPos = useRef(0);
   const hoveringRef = useRef(false);
+  const touchingRef = useRef(false);
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
 
@@ -72,7 +74,7 @@ export default function HomeScreen() {
     if (carouselRecipes.length < 2) return;
     const totalWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
     const interval = setInterval(() => {
-      if (hoveringRef.current) return;
+      if (hoveringRef.current || touchingRef.current) return;
       scrollPos.current += 1;
       if (scrollPos.current >= totalWidth) {
         scrollPos.current = 0;
@@ -152,9 +154,21 @@ export default function HomeScreen() {
           ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          scrollEnabled={false}
+          scrollEnabled={true}
           style={styles.carouselStrip}
           contentContainerStyle={styles.carouselStripContent}
+          onScrollBeginDrag={() => {
+            touchingRef.current = true;
+            if (resumeTimer.current) clearTimeout(resumeTimer.current);
+          }}
+          onScrollEndDrag={(e) => {
+            // Sync scroll position so auto-scroll continues from where user left off
+            scrollPos.current = e.nativeEvent.contentOffset.x;
+            // Resume auto-scroll after 3 seconds of no interaction
+            resumeTimer.current = setTimeout(() => {
+              touchingRef.current = false;
+            }, 3000);
+          }}
         >
           {carouselData.map((item, index) => (
             <TouchableOpacity
