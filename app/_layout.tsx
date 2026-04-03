@@ -8,19 +8,44 @@ import NavBar from '../components/NavBar';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 
-function usePasswordRecoveryRedirect() {
+function useAuthRedirects() {
   const router = useRouter();
   useEffect(() => {
+    // Check URL hash on load for auth redirects
+    if (Platform.OS === 'web') {
+      const hash = window.location.hash;
+      if (hash.includes('type=recovery')) {
+        // Password reset - wait for session then redirect
+        const check = setInterval(() => {
+          supabase.auth.getSession().then(({ data }) => {
+            if (data.session) {
+              clearInterval(check);
+              router.replace('/reset-password');
+            }
+          });
+        }, 200);
+        setTimeout(() => clearInterval(check), 10000);
+        return () => clearInterval(check);
+      }
+      if (hash.includes('type=signup') || hash.includes('type=email')) {
+        // Email confirmation - wait for session then go to profile
+        const check = setInterval(() => {
+          supabase.auth.getSession().then(({ data }) => {
+            if (data.session) {
+              clearInterval(check);
+              router.replace('/(tabs)/profile');
+            }
+          });
+        }, 200);
+        setTimeout(() => clearInterval(check), 10000);
+        return () => clearInterval(check);
+      }
+    }
+
+    // Also listen for auth events as backup
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         router.replace('/reset-password');
-      }
-      if (event === 'SIGNED_IN') {
-        // After email confirmation, send to profile
-        const hash = Platform.OS === 'web' ? window.location.hash : '';
-        if (hash.includes('type=signup') || hash.includes('type=email')) {
-          router.replace('/(tabs)/profile');
-        }
       }
     });
     return () => listener.subscription.unsubscribe();
@@ -70,7 +95,7 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Pacifico_400Regular });
   useWebMeta();
   useWebHoverStyles();
-  usePasswordRecoveryRedirect();
+  useAuthRedirects();
 
   if (!fontsLoaded) return null;
 
