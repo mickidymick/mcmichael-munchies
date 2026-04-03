@@ -40,10 +40,12 @@ export default function ProfileScreen() {
   const [recipesAdded, setRecipesAdded] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
+  const [pendingRequestCount, setPendingRequestCount] = useState(0);
 
   // Access request
   const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'denied' | 'sending'>('none');
   const [requestMessage, setRequestMessage] = useState('');
+  const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -77,6 +79,13 @@ export default function ProfileScreen() {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .then(({ count }) => { if (count !== null) setReviewCount(count); });
+
+      // Pending access requests count (admin only)
+      supabase
+        .from('access_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .then(({ count }) => { if (count !== null) setPendingRequestCount(count); });
 
       supabase
         .from('access_requests')
@@ -194,7 +203,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user.email}</Text>
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>
-              {role === 'admin' ? 'Admin' : role === 'member' ? 'Family Member' : 'Pending Approval'}
+              {role === 'admin' ? 'Admin' : role === 'member' ? 'Family Member' : 'Viewer'}
             </Text>
           </View>
           {memberSince && (
@@ -204,35 +213,31 @@ export default function ProfileScreen() {
 
         {/* Access request for viewers */}
         {role === 'viewer' && (
-          <View style={styles.requestCard}>
-            {requestStatus === 'pending' ? (
-              <>
-                <Ionicons name="time-outline" size={24} color={Colors.primary} />
-                <Text style={styles.requestTitle}>Request Pending</Text>
-                <Text style={styles.requestText}>Your request for member access has been sent. An admin will review it soon.</Text>
-              </>
-            ) : requestStatus === 'denied' ? (
-              <>
-                <Ionicons name="close-circle-outline" size={24} color={Colors.danger} />
-                <Text style={styles.requestTitle}>Request Denied</Text>
-                <Text style={styles.requestText}>Your access request was denied. You can submit a new one.</Text>
-                <TouchableOpacity style={styles.requestBtn} onPress={() => setRequestStatus('none')}>
-                  <Text style={styles.requestBtnText}>Request Again</Text>
+          requestStatus === 'pending' ? (
+            <View style={styles.requestBanner}>
+              <Ionicons name="time-outline" size={18} color={Colors.primary} />
+              <Text style={styles.requestBannerText}>Access request pending</Text>
+            </View>
+          ) : requestStatus === 'denied' ? (
+            <TouchableOpacity style={styles.requestBanner} onPress={() => { setRequestStatus('none'); setShowRequestForm(true); }}>
+              <Ionicons name="close-circle-outline" size={18} color={Colors.danger} />
+              <Text style={styles.requestBannerText}>Access request denied. Tap to try again.</Text>
+            </TouchableOpacity>
+          ) : showRequestForm ? (
+            <View style={styles.requestCard}>
+              <Text style={styles.requestTitle}>Request Member Access</Text>
+              <TextInput
+                style={styles.requestInput}
+                placeholder="Optional message (e.g. which family you're from)"
+                placeholderTextColor={Colors.textSecondary}
+                value={requestMessage}
+                onChangeText={setRequestMessage}
+                maxLength={200}
+              />
+              <View style={styles.requestFormButtons}>
+                <TouchableOpacity style={styles.requestCancelBtn} onPress={() => setShowRequestForm(false)}>
+                  <Text style={styles.requestCancelBtnText}>Cancel</Text>
                 </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Ionicons name="lock-open-outline" size={24} color={Colors.primary} />
-                <Text style={styles.requestTitle}>Want to add recipes?</Text>
-                <Text style={styles.requestText}>Request member access to add, edit, and manage recipes.</Text>
-                <TextInput
-                  style={styles.requestInput}
-                  placeholder="Optional message (e.g. which family you're from)"
-                  placeholderTextColor={Colors.textSecondary}
-                  value={requestMessage}
-                  onChangeText={setRequestMessage}
-                  maxLength={200}
-                />
                 <TouchableOpacity
                   style={styles.requestBtn}
                   onPress={handleRequestAccess}
@@ -241,12 +246,23 @@ export default function ProfileScreen() {
                   {requestStatus === 'sending' ? (
                     <ActivityIndicator color="#FFF" size="small" />
                   ) : (
-                    <Text style={styles.requestBtnText}>Request Access</Text>
+                    <Text style={styles.requestBtnText}>Send Request</Text>
                   )}
                 </TouchableOpacity>
-              </>
-            )}
-          </View>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.requestBanner}
+              onPress={() => setShowRequestForm(true)}
+              // @ts-ignore
+              dataSet={{ hover: 'family' }}
+            >
+              <Ionicons name="lock-open-outline" size={18} color={Colors.primary} />
+              <Text style={styles.requestBannerText}>Want to add recipes? Request access</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )
         )}
 
         {/* Stats */}
@@ -367,6 +383,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           {isAdmin && (
+            <>
             <TouchableOpacity
               style={styles.actionRow}
               onPress={() => router.push('/admin')}
@@ -382,6 +399,32 @@ export default function ProfileScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionRow}
+              onPress={() => router.push('/pending-requests')}
+              // @ts-ignore
+              dataSet={{ hover: 'family' }}
+            >
+              <View style={[styles.actionIcon, pendingRequestCount > 0 && { backgroundColor: Colors.primary }]}>
+                <Ionicons name="mail-outline" size={22} color={pendingRequestCount > 0 ? '#FFF' : Colors.primary} />
+              </View>
+              <View style={styles.actionTextCol}>
+                <Text style={styles.actionTitle}>Pending Requests</Text>
+                <Text style={styles.actionDesc}>
+                  {pendingRequestCount > 0
+                    ? `${pendingRequestCount} request${pendingRequestCount !== 1 ? 's' : ''} waiting for review`
+                    : 'No pending requests'}
+                </Text>
+              </View>
+              {pendingRequestCount > 0 && (
+                <View style={styles.reviewBadge}>
+                  <Text style={styles.reviewBadgeText}>{pendingRequestCount}</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+            </TouchableOpacity>
+            </>
           )}
         </View>
 
@@ -534,19 +577,30 @@ const styles = StyleSheet.create({
   memberSince: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
 
   // Access request
-  requestCard: {
+  requestBanner: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     backgroundColor: Colors.secondary,
     marginHorizontal: 16,
-    marginTop: 16,
-    borderRadius: 16,
-    padding: 20,
-    gap: 8,
+    marginTop: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  requestTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
-  requestText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  requestBannerText: { flex: 1, fontSize: 14, color: Colors.text, fontWeight: '500' },
+  requestCard: {
+    backgroundColor: Colors.secondary,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 12,
+    padding: 16,
+    gap: 10,
+  },
+  requestTitle: { fontSize: 15, fontWeight: '700', color: Colors.text },
   requestInput: {
-    width: '100%',
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -555,14 +609,21 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 14,
     color: Colors.text,
-    marginTop: 4,
   },
-  requestBtn: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 24,
+  requestFormButtons: { flexDirection: 'row', gap: 10, justifyContent: 'flex-end' },
+  requestCancelBtn: {
+    paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
-    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  requestCancelBtnText: { color: Colors.text, fontWeight: '600', fontSize: 14 },
+  requestBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   requestBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
 

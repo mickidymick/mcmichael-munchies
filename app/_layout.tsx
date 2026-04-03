@@ -109,6 +109,16 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="pending-requests"
+          options={{
+            headerShown: true,
+            headerTitle: 'Pending Requests',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
+        <Stack.Screen
           name="admin"
           options={{
             headerShown: true,
