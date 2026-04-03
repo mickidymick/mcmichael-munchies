@@ -138,7 +138,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'relative', zIndex: 50 },
+  container: { position: 'relative', zIndex: 9999 },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
-    elevation: 5,
-    zIndex: 100,
+    elevation: 10,
+    zIndex: 9999,
   },
   suggestion: {
     flexDirection: 'row',

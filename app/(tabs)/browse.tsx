@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
     paddingHorizontal: 16,
+    zIndex: 100,
   },
   heading: {
     fontSize: 22,
