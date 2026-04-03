@@ -13,30 +13,13 @@ import { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
+import { supabase, Recipe } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
+import ChipRow from '../../components/ChipRow';
+import { SORT_OPTIONS, FAMILIES, CATEGORIES, CUISINES } from '../../constants/recipes';
+import { toggleMulti } from '../../lib/utils';
 
 const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
-
-const SORT_OPTIONS = [
-  { label: 'A-Z', value: 'az' },
-  { label: 'Newest', value: 'newest' },
-  { label: 'Oldest', value: 'oldest' },
-];
-
-const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
-
-const CATEGORIES = [
-  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
-  'Beef', 'Chicken', 'Pork', 'Seafood',
-  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
-  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok',
-];
-
-const CUISINES = [
-  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
-  'Indian', 'Comfort Food', 'Other',
-];
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -87,9 +70,6 @@ export default function FavoritesScreen() {
     }, [loadFavorites])
   );
 
-  function toggleMulti(arr: string[], val: string): string[] {
-    return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
-  }
 
   const activeFilterCount = [
     selectedFamilies.length > 0,
@@ -132,35 +112,6 @@ export default function FavoritesScreen() {
 
     return results;
   }, [allFavorites, query, selectedFamilies, selectedCategories, selectedCuisines, selectedSort]);
-
-  function renderChipRow(
-    label: string,
-    items: string[],
-    selected: string[],
-    onToggle: (val: string) => void,
-  ) {
-    return (
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>{label}</Text>
-        <View style={styles.chipWrap}>
-          {items.map((item) => {
-            const isActive = selected.includes(item);
-            return (
-              <TouchableOpacity
-                key={item}
-                style={[styles.chip, isActive && styles.chipActive]}
-                // @ts-ignore
-                dataSet={{ hover: 'chip' }}
-                onPress={() => onToggle(item)}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>{item}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
-  }
 
   if (loading) {
     return <ActivityIndicator style={styles.loader} color={Colors.primary} />;
@@ -238,9 +189,9 @@ export default function FavoritesScreen() {
 
         {showFilters && (
           <View style={styles.filtersPanel}>
-            {renderChipRow('Family', FAMILIES, selectedFamilies, (v) => setSelectedFamilies(toggleMulti(selectedFamilies, v)))}
-            {renderChipRow('Category', CATEGORIES, selectedCategories, (v) => setSelectedCategories(toggleMulti(selectedCategories, v)))}
-            {renderChipRow('Cuisine', CUISINES, selectedCuisines, (v) => setSelectedCuisines(toggleMulti(selectedCuisines, v)))}
+            <ChipRow label="Family" items={FAMILIES} selected={selectedFamilies} onToggle={(v) => setSelectedFamilies(toggleMulti(selectedFamilies, v))} />
+            <ChipRow label="Category" items={CATEGORIES} selected={selectedCategories} onToggle={(v) => setSelectedCategories(toggleMulti(selectedCategories, v))} />
+            <ChipRow label="Cuisine" items={CUISINES} selected={selectedCuisines} onToggle={(v) => setSelectedCuisines(toggleMulti(selectedCuisines, v))} />
 
             {activeFilterCount > 0 && (
               <TouchableOpacity
@@ -346,27 +297,6 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     marginTop: 4,
   },
-  filterSection: { marginTop: 8 },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: 12, color: Colors.text, fontWeight: '500' },
-  chipTextActive: { color: '#FFF' },
   clearButton: {
     alignSelf: 'center',
     marginTop: 8,

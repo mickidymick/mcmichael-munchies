@@ -1,4 +1,5 @@
 import { View, Platform, StyleProp, ViewStyle } from 'react-native';
+import { Colors } from '../constants/colors';
 import { useRef, useEffect, ReactNode } from 'react';
 
 type Props = {
@@ -44,7 +45,7 @@ export default function DraggableRow({ index, dragType, onReorder, style, childr
       e.preventDefault();
       const state = dragState[dragType];
       if (state?.from !== null && state?.from !== index) {
-        el.style.outline = `2px dashed #c47c30`;
+        el.style.outline = `2px dashed ${Colors.primary}`;
         el.style.outlineOffset = '-2px';
         el.style.borderRadius = '10px';
       }

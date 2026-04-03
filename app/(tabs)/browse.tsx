@@ -14,38 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../../constants/colors';
 
 const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
-import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
+import { supabase, Recipe } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
-
-const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
-
-const CATEGORIES = [
-  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
-  'Beef', 'Chicken', 'Pork', 'Seafood',
-  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
-  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok',
-];
-
-const CUISINES = [
-  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
-  'Indian', 'Comfort Food', 'Other',
-];
-
-const COOK_TIMES = [
-  { label: '< 15 min', value: 'quick' },
-  { label: '15-45 min', value: 'medium' },
-  { label: '45+ min', value: 'long' },
-];
-
-const SORT_OPTIONS = [
-  { label: 'A-Z', value: 'az' },
-  { label: 'Newest', value: 'newest' },
-  { label: 'Oldest', value: 'oldest' },
-];
-
-const DIETARY_TAGS = [
-  'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb',
-];
+import ChipRow from '../../components/ChipRow';
+import { FAMILIES, CATEGORIES, CUISINES, COOK_TIMES, SORT_OPTIONS, DIETARY_TAGS } from '../../constants/recipes';
+import { toggleMulti } from '../../lib/utils';
 
 const PAGE_SIZE = 20;
 // Fetch extra to account for client-side filters removing results
@@ -93,9 +66,6 @@ export default function BrowseScreen() {
     fetchRecipes(0, true);
   }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
 
-  function toggleMulti(arr: string[], val: string): string[] {
-    return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
-  }
 
   const activeFilterCount = [
     selectedFamilies.length > 0,
@@ -211,39 +181,6 @@ export default function BrowseScreen() {
     fetchRecipes(nextPage, false);
   }
 
-  function renderChipRow(
-    label: string,
-    items: (string | { label: string; value: string })[],
-    selected: string[],
-    onToggle: (val: string) => void,
-  ) {
-    return (
-      <View style={styles.filterSection}>
-        <Text style={styles.filterLabel}>{label}</Text>
-        <View style={styles.chipWrap}>
-          {items.map((item) => {
-            const value = typeof item === 'string' ? item : item.value;
-            const chipLabel = typeof item === 'string' ? item : item.label;
-            const isActive = selected.includes(value);
-            return (
-              <TouchableOpacity
-                key={value}
-                style={[styles.chip, isActive && styles.chipActive]}
-                // @ts-ignore
-                dataSet={{ hover: 'chip' }}
-                onPress={() => onToggle(value)}
-              >
-                <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
-                  {chipLabel}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -295,29 +232,11 @@ export default function BrowseScreen() {
         {/* Expandable filters */}
         {showFilters && (
           <View style={styles.filtersPanel}>
-            {renderChipRow('Family', FAMILIES, selectedFamilies, (v) => setSelectedFamilies(toggleMulti(selectedFamilies, v)))}
-            {renderChipRow('Category', CATEGORIES, selectedCategories, (v) => setSelectedCategories(toggleMulti(selectedCategories, v)))}
-            {renderChipRow('Cuisine', CUISINES, selectedCuisines, (v) => setSelectedCuisines(toggleMulti(selectedCuisines, v)))}
-            {renderChipRow('Cook Time', COOK_TIMES, selectedCookTimes, (v) => setSelectedCookTimes(toggleMulti(selectedCookTimes, v)))}
-
-            <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Dietary</Text>
-              <View style={styles.chipWrap}>
-                {DIETARY_TAGS.map((tag) => (
-                  <TouchableOpacity
-                    key={tag}
-                    style={[styles.chip, selectedDietary.includes(tag) && styles.chipActive]}
-                    // @ts-ignore
-                    dataSet={{ hover: 'chip' }}
-                    onPress={() => setSelectedDietary(toggleMulti(selectedDietary, tag))}
-                  >
-                    <Text style={[styles.chipText, selectedDietary.includes(tag) && styles.chipTextActive]}>
-                      {tag}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+            <ChipRow label="Family" items={FAMILIES} selected={selectedFamilies} onToggle={(v) => setSelectedFamilies(toggleMulti(selectedFamilies, v))} />
+            <ChipRow label="Category" items={CATEGORIES} selected={selectedCategories} onToggle={(v) => setSelectedCategories(toggleMulti(selectedCategories, v))} />
+            <ChipRow label="Cuisine" items={CUISINES} selected={selectedCuisines} onToggle={(v) => setSelectedCuisines(toggleMulti(selectedCuisines, v))} />
+            <ChipRow label="Cook Time" items={COOK_TIMES} selected={selectedCookTimes} onToggle={(v) => setSelectedCookTimes(toggleMulti(selectedCookTimes, v))} />
+            <ChipRow label="Dietary" items={DIETARY_TAGS} selected={selectedDietary} onToggle={(v) => setSelectedDietary(toggleMulti(selectedDietary, v))} />
 
             {activeFilterCount > 0 && (
               <TouchableOpacity
@@ -447,27 +366,6 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
     marginTop: 4,
   },
-  filterSection: { marginTop: 8 },
-  filterLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  chipText: { fontSize: 12, color: Colors.text, fontWeight: '500' },
-  chipTextActive: { color: '#FFF' },
   clearButton: {
     alignSelf: 'center',
     marginTop: 8,

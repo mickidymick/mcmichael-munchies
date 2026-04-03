@@ -21,26 +21,7 @@ import { supabase, Ingredient, Step, RecipeFamily } from '../../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../../lib/autocomplete';
 import { estimateCalories } from '../../lib/nutrition';
 import { useUserRole } from '../../lib/useUserRole';
-
-const CATEGORIES = [
-  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
-  'Beef', 'Chicken', 'Pork', 'Seafood',
-  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
-  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok', 'Other',
-];
-
-const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
-
-const UNITS = [
-  '', 'tsp', 'tbsp', 'cup', 'oz', 'fl oz', 'pt', 'qt', 'gal',
-  'ml', 'l', 'lb', 'g', 'kg', 'pinch', 'dash', 'piece', 'slice',
-  'clove', 'can', 'bag', 'bunch', 'sprig', 'whole',
-];
-
-const CUISINES = [
-  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
-  'Indian', 'Comfort Food', 'Other',
-];
+import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../../constants/recipes';
 
 export default function EditRecipeScreen() {
   const router = useRouter();
@@ -278,10 +259,23 @@ export default function EditRecipeScreen() {
     }
   }
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
   async function uploadImage(uri: string, name: string): Promise<string | null> {
     const response = await fetch(uri);
     const blob = await response.blob();
     const mimeType = blob.type || 'image/jpeg';
+
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+      Alert.alert('Invalid file type', 'Please upload a JPEG, PNG, or WebP image.');
+      return null;
+    }
+    if (blob.size > MAX_IMAGE_SIZE) {
+      Alert.alert('File too large', 'Images must be under 5MB.');
+      return null;
+    }
+
     const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
     const path = `${name}.${fileExt}`;
     const { error } = await supabase.storage
@@ -375,13 +369,13 @@ export default function EditRecipeScreen() {
         </TouchableOpacity>
 
         <Text style={styles.label}>Title *</Text>
-        <TextInput style={styles.input} placeholder="e.g. Grandma's Apple Pie" placeholderTextColor={Colors.textSecondary} value={title} onChangeText={setTitle} />
+        <TextInput style={styles.input} placeholder="e.g. Grandma's Apple Pie" placeholderTextColor={Colors.textSecondary} value={title} onChangeText={setTitle} maxLength={200} />
 
         <Text style={styles.label}>Description</Text>
-        <TextInput style={[styles.input, styles.multiline]} placeholder="A short description..." placeholderTextColor={Colors.textSecondary} value={description} onChangeText={setDescription} multiline numberOfLines={3} />
+        <TextInput style={[styles.input, styles.multiline]} placeholder="A short description..." placeholderTextColor={Colors.textSecondary} value={description} onChangeText={setDescription} multiline numberOfLines={3} maxLength={1000} />
 
         <Text style={styles.label}>Notes</Text>
-        <TextInput style={[styles.input, styles.multiline]} placeholder="Source, tips, variations, personal notes..." placeholderTextColor={Colors.textSecondary} value={notes} onChangeText={setNotes} multiline numberOfLines={3} />
+        <TextInput style={[styles.input, styles.multiline]} placeholder="Source, tips, variations, personal notes..." placeholderTextColor={Colors.textSecondary} value={notes} onChangeText={setNotes} multiline numberOfLines={3} maxLength={1000} />
 
         <Text style={styles.label}>Categories</Text>
         <View style={styles.chipWrap}>

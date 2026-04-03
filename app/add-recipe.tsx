@@ -21,26 +21,7 @@ import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
-
-const CATEGORIES = [
-  "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
-  'Beef', 'Chicken', 'Pork', 'Seafood',
-  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
-  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok', 'Other',
-];
-
-const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
-
-const UNITS = [
-  '', 'tsp', 'tbsp', 'cup', 'oz', 'fl oz', 'pt', 'qt', 'gal',
-  'ml', 'l', 'lb', 'g', 'kg', 'pinch', 'dash', 'piece', 'slice',
-  'clove', 'can', 'bag', 'bunch', 'sprig', 'whole',
-];
-
-const CUISINES = [
-  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
-  'Indian', 'Comfort Food', 'Other',
-];
+import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../constants/recipes';
 
 export default function AddRecipeScreen() {
   const router = useRouter();
@@ -251,10 +232,23 @@ export default function AddRecipeScreen() {
     }
   }
 
+  const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
   async function uploadImage(uri: string, name: string): Promise<string | null> {
     const response = await fetch(uri);
     const blob = await response.blob();
     const mimeType = blob.type || 'image/jpeg';
+
+    if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+      Alert.alert('Invalid file type', 'Please upload a JPEG, PNG, or WebP image.');
+      return null;
+    }
+    if (blob.size > MAX_IMAGE_SIZE) {
+      Alert.alert('File too large', 'Images must be under 5MB.');
+      return null;
+    }
+
     const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
     const path = `${name}.${fileExt}`;
 
@@ -381,6 +375,7 @@ export default function AddRecipeScreen() {
           placeholderTextColor={Colors.textSecondary}
           value={title}
           onChangeText={setTitle}
+          maxLength={200}
         />
 
         {/* Description */}
@@ -393,6 +388,7 @@ export default function AddRecipeScreen() {
           onChangeText={setDescription}
           multiline
           numberOfLines={3}
+          maxLength={1000}
         />
 
         {/* Notes */}
@@ -405,6 +401,7 @@ export default function AddRecipeScreen() {
           onChangeText={setNotes}
           multiline
           numberOfLines={3}
+          maxLength={1000}
         />
 
         {/* Category (multi-select) */}
@@ -548,6 +545,7 @@ export default function AddRecipeScreen() {
               placeholderTextColor={Colors.textSecondary}
               value={ing.amount}
               onChangeText={(v) => updateIngredient(i, 'amount', v)}
+              maxLength={20}
             />
             <View style={styles.unitWrapper}>
               <TouchableOpacity
@@ -587,6 +585,7 @@ export default function AddRecipeScreen() {
                 placeholderTextColor={Colors.textSecondary}
                 value={ing.item}
                 onChangeText={(v) => updateIngredient(i, 'item', v)}
+                maxLength={200}
                 onFocus={() => setIngredientFocusIndex(i)}
                 onBlur={() => setTimeout(() => setIngredientFocusIndex(null), 200)}
                 onKeyPress={(e: any) => {
@@ -656,6 +655,7 @@ export default function AddRecipeScreen() {
               onChangeText={(v) => updateStep(i, v)}
               multiline
               numberOfLines={3}
+              maxLength={2000}
             />
             {step.image_url ? (
               <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />

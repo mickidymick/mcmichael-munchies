@@ -40,11 +40,11 @@ SELECT id, COALESCE(raw_user_meta_data->>'full_name', ''), 'viewer'
 FROM auth.users
 WHERE id NOT IN (SELECT id FROM profiles);
 
--- 4. Set yourself (Zach) as admin
--- >>> REPLACE the email below with your actual email <<<
+-- 4. Set yourself as admin
+-- >>> REPLACE 'your-email@example.com' with your actual email <<<
 UPDATE profiles
 SET role = 'admin'
-WHERE id = (SELECT id FROM auth.users WHERE email = 'utbigmac41@gmail.com');
+WHERE id = (SELECT id FROM auth.users WHERE email = 'your-email@example.com');
 
 -- 5. Add family, prep_time, cook_time, servings columns to recipes
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS family TEXT;
@@ -69,6 +69,27 @@ ALTER TABLE recipes ADD COLUMN IF NOT EXISTS categories JSONB NOT NULL DEFAULT '
 ALTER TABLE recipes DROP CONSTRAINT IF EXISTS recipes_cuisine_check;
 ALTER TABLE recipes ADD CONSTRAINT recipes_cuisine_check
   CHECK (cuisine IN ('American', 'Italian', 'Mexican', 'Japanese', 'Chinese', 'Indian', 'Comfort Food', 'Other', ''));
+
+-- 6a. RLS policies on favorites
+-- (Create the favorites table if it doesn't exist)
+CREATE TABLE IF NOT EXISTS favorites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, recipe_id)
+);
+
+ALTER TABLE favorites ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own favorites"
+  ON favorites FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own favorites"
+  ON favorites FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own favorites"
+  ON favorites FOR DELETE USING (auth.uid() = user_id);
 
 -- 6. RLS policies on profiles
 CREATE POLICY "Profiles are viewable by everyone"

@@ -6,6 +6,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { memo } from 'react';
 import { Colors } from '../constants/colors';
 import { Recipe } from '../lib/supabase';
 import FamilyBadge from './FamilyBadge';
@@ -14,7 +15,7 @@ type Props = {
   recipe: Recipe;
 };
 
-export default function RecipeCard({ recipe }: Props) {
+export default memo(function RecipeCard({ recipe }: Props) {
   const router = useRouter();
 
   return (
@@ -54,7 +55,7 @@ export default function RecipeCard({ recipe }: Props) {
       </View>
     </TouchableOpacity>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

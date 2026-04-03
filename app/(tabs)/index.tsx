@@ -16,31 +16,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Colors, Layout } from '../../constants/colors';
-import { supabase, Recipe, RecipeFamily } from '../../lib/supabase';
+import { supabase, Recipe } from '../../lib/supabase';
 import { useUserRole } from '../../lib/useUserRole';
 import FamilyBadge from '../../components/FamilyBadge';
+import { FAMILIES, CATEGORY_ICONS } from '../../constants/recipes';
 
 const { width } = Dimensions.get('window');
-
-const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
-
-const CATEGORIES: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { label: "Zach's Favorites", icon: 'heart-outline' },
-  { label: 'Breakfast', icon: 'sunny-outline' },
-  { label: 'All things Sourdough', icon: 'leaf-outline' },
-  { label: 'Pizza', icon: 'pizza-outline' },
-  { label: 'Beef', icon: 'flame-outline' },
-  { label: 'Chicken', icon: 'egg-outline' },
-  { label: 'Pork', icon: 'bonfire-outline' },
-  { label: 'Seafood', icon: 'fish-outline' },
-  { label: 'Soups, Stews & Chili', icon: 'water-outline' },
-  { label: 'Vegetables', icon: 'nutrition-outline' },
-  { label: 'Pasta & Rice', icon: 'grid-outline' },
-  { label: 'Sauces, Dips & Dressings', icon: 'color-filter-outline' },
-  { label: 'Desserts', icon: 'ice-cream-outline' },
-  { label: 'Quick & Easy', icon: 'timer-outline' },
-  { label: 'The Wok', icon: 'flame-outline' },
-];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -70,14 +51,14 @@ export default function HomeScreen() {
       const [countRes, recentRes, carouselRes] = await Promise.all([
         supabase.from('recipes').select('*', { count: 'exact', head: true }),
         supabase.from('recipes').select('*').order('created_at', { ascending: false }).limit(6),
-        supabase.from('recipes').select('id, title, description, image_url, family, categories, cuisine, prep_time, cook_time').order('created_at', { ascending: false }).limit(20),
+        supabase.from('recipes').select('*').order('created_at', { ascending: false }).limit(20),
       ]);
       if (countRes.error && recentRes.error && carouselRes.error) {
         setLoadError(true);
       } else {
         if (countRes.count !== null) setTotalCount(countRes.count);
         if (recentRes.data) setRecentRecipes(recentRes.data);
-        if (carouselRes.data) setCarouselRecipes(carouselRes.data as any);
+        if (carouselRes.data) setCarouselRecipes(carouselRes.data);
       }
     } catch {
       setLoadError(true);
@@ -222,18 +203,18 @@ export default function HomeScreen() {
                   <Text style={styles.carouselCardTitle} numberOfLines={hoveredCard === index ? 2 : 1}>{item.title}</Text>
                   {hoveredCard === index && (
                     <>
-                      {((item as any).categories?.length > 0 || (item as any).cuisine) && (
+                      {(item.categories?.length > 0 || item.cuisine) && (
                         <Text style={styles.carouselCardMeta} numberOfLines={1}>
-                          {[...((item as any).categories ?? []), (item as any).cuisine].filter(Boolean).join(' · ')}
+                          {[...(item.categories ?? []), item.cuisine].filter(Boolean).join(' · ')}
                         </Text>
                       )}
-                      {((item as any).prep_time || (item as any).cook_time) && (
+                      {(item.prep_time || item.cook_time) && (
                         <Text style={styles.carouselCardMeta}>
-                          {((item as any).prep_time ?? 0) + ((item as any).cook_time ?? 0)} min total
+                          {(item.prep_time ?? 0) + (item.cook_time ?? 0)} min total
                         </Text>
                       )}
-                      {(item as any).description ? (
-                        <Text style={styles.carouselCardDesc} numberOfLines={3}>{(item as any).description}</Text>
+                      {item.description ? (
+                        <Text style={styles.carouselCardDesc} numberOfLines={3}>{item.description}</Text>
                       ) : null}
                     </>
                   )}
@@ -275,7 +256,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>{CATEGORIES.length}</Text>
+                <Text style={styles.statNumber}>{CATEGORY_ICONS.length}</Text>
                 <Text style={styles.statLabel}>Categories</Text>
               </View>
             </View>
@@ -310,7 +291,7 @@ export default function HomeScreen() {
         <View style={styles.contentWrap}>
           <Text style={styles.sectionTitle}>Explore by Category</Text>
           <View style={styles.categoryChipGrid}>
-            {CATEGORIES.map((cat) => (
+            {CATEGORY_ICONS.map((cat) => (
               <TouchableOpacity
                 key={cat.label}
                 style={styles.categoryChip}

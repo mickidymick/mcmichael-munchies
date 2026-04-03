@@ -137,7 +137,7 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>
-              {displayName[0].toUpperCase()}
+              {(displayName[0] ?? '?').toUpperCase()}
             </Text>
           </View>
           <Text style={styles.name}>{displayName}</Text>
