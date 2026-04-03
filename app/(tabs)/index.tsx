@@ -158,19 +158,29 @@ export default function HomeScreen() {
           style={styles.carouselStrip}
           contentContainerStyle={styles.carouselStripContent}
           decelerationRate="normal"
-          onScrollBeginDrag={() => {
+          onTouchStart={() => {
             setAutoScroll(false);
             if (resumeTimer.current) clearTimeout(resumeTimer.current);
           }}
-          onMomentumScrollEnd={(e) => {
-            scrollPos.current = e.nativeEvent.contentOffset.x;
+          onTouchEnd={() => {
+            // Small delay to read final scroll position after momentum
+            setTimeout(() => {
+              if (scrollRef.current) {
+                // @ts-ignore - access underlying DOM scrollLeft on web
+                const el = scrollRef.current as unknown as HTMLElement;
+                if (el?.scrollLeft !== undefined) {
+                  scrollPos.current = el.scrollLeft;
+                }
+              }
+            }, 500);
             resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
           }}
-          onScrollEndDrag={(e) => {
-            scrollPos.current = e.nativeEvent.contentOffset.x;
-            // Resume after 3s in case there's no momentum phase
-            resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
+          onScroll={(e) => {
+            if (!autoScroll) {
+              scrollPos.current = e.nativeEvent.contentOffset.x;
+            }
           }}
+          scrollEventThrottle={100}
         >
           {carouselData.map((item, index) => (
             <TouchableOpacity
