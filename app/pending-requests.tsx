@@ -42,13 +42,28 @@ export default function PendingRequestsScreen() {
   async function loadRequests() {
     const { data } = await supabase
       .from('access_requests')
-      .select('*, profiles(full_name, role)')
+      .select('*')
       .eq('status', 'pending')
       .order('created_at', { ascending: true });
 
-    const mapped: AccessRequest[] = (data ?? []).map((r: any) => ({
+    if (!data || data.length === 0) {
+      setRequests([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch profiles for each request
+    const userIds = data.map((r: any) => r.user_id);
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, role')
+      .in('id', userIds);
+
+    const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+    const mapped: AccessRequest[] = data.map((r: any) => ({
       ...r,
-      profile: r.profiles,
+      profile: profileMap.get(r.user_id) ?? null,
     }));
     setRequests(mapped);
     setLoading(false);
