@@ -124,6 +124,20 @@ export default function ProfileScreen() {
     setAuthMessage(msg);
   }
 
+  async function handleResetPassword() {
+    if (!email.trim()) {
+      showMessage('Enter your email address first, then tap "Forgot password?"');
+      return;
+    }
+    setSubmitting(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: 'https://mcmichael-munchies.com/profile',
+    });
+    if (error) showMessage(error.message);
+    else showMessage('Password reset email sent! Check your inbox.');
+    setSubmitting(false);
+  }
+
   async function handleLogin() {
     setAuthMessage('');
     setSubmitting(true);
@@ -494,6 +508,12 @@ export default function ProfileScreen() {
           secureTextEntry
         />
 
+        {mode === 'login' && (
+          <TouchableOpacity onPress={handleResetPassword}>
+            <Text style={styles.forgotText}>Forgot password?</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={styles.button}
           onPress={mode === 'login' ? handleLogin : handleSignup}
@@ -763,6 +783,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     textAlign: 'center',
+  },
+  forgotText: {
+    textAlign: 'right',
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: '500',
   },
   switchText: {
     textAlign: 'center',
