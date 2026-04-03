@@ -6,6 +6,20 @@ import { useEffect } from 'react';
 import { Colors } from '../constants/colors';
 import NavBar from '../components/NavBar';
 
+function useWebMeta() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    // Apple touch icon
+    const link = document.createElement('link');
+    link.rel = 'apple-touch-icon';
+    link.href = '/apple-touch-icon.png';
+    document.head.appendChild(link);
+    // Page title
+    document.title = 'McMichael Munchies';
+    return () => { document.head.removeChild(link); };
+  }, []);
+}
+
 function useWebHoverStyles() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -33,6 +47,7 @@ function useWebHoverStyles() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Pacifico_400Regular });
+  useWebMeta();
   useWebHoverStyles();
 
   if (!fontsLoaded) return null;
