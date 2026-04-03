@@ -41,6 +41,10 @@ export default function ProfileScreen() {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
 
+  // Access request
+  const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'denied' | 'sending'>('none');
+  const [requestMessage, setRequestMessage] = useState('');
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
@@ -73,19 +77,52 @@ export default function ProfileScreen() {
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .then(({ count }) => { if (count !== null) setReviewCount(count); });
+
+      supabase
+        .from('access_requests')
+        .select('status')
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'denied'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setRequestStatus(data.status as 'pending' | 'denied');
+          else setRequestStatus('none');
+        });
     }, [user])
   );
 
+  async function handleRequestAccess() {
+    if (!user) return;
+    setRequestStatus('sending');
+    const { error } = await supabase.from('access_requests').insert({
+      user_id: user.id,
+      message: requestMessage.trim() || null,
+    });
+    if (error) {
+      Alert.alert('Error', error.message);
+      setRequestStatus('none');
+    } else {
+      setRequestStatus('pending');
+      setRequestMessage('');
+    }
+  }
+
+  const [authMessage, setAuthMessage] = useState('');
+
   async function handleLogin() {
+    setAuthMessage('');
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) Alert.alert('Login failed', error.message);
+    if (error) setAuthMessage(error.message);
     setSubmitting(false);
   }
 
   async function handleSignup() {
+    setAuthMessage('');
     if (!name.trim()) {
-      Alert.alert('Name required', 'Please enter your name so the family knows who you are.');
+      setAuthMessage('Please enter your name.');
       return;
     }
     setSubmitting(true);
@@ -94,8 +131,11 @@ export default function ProfileScreen() {
       password,
       options: { data: { full_name: name } },
     });
-    if (error) Alert.alert('Signup failed', error.message);
-    else Alert.alert('Check your email', 'We sent you a confirmation link.');
+    if (error) setAuthMessage(error.message);
+    else {
+      setAuthMessage('Account created! Check your email for a confirmation link, then sign in.');
+      setMode('login');
+    }
     setSubmitting(false);
   }
 
@@ -151,6 +191,53 @@ export default function ProfileScreen() {
             <Text style={styles.memberSince}>Member since {memberSince}</Text>
           )}
         </View>
+
+        {/* Access request for viewers */}
+        {role === 'viewer' && (
+          <View style={styles.requestCard}>
+            {requestStatus === 'pending' ? (
+              <>
+                <Ionicons name="time-outline" size={24} color={Colors.primary} />
+                <Text style={styles.requestTitle}>Request Pending</Text>
+                <Text style={styles.requestText}>Your request for member access has been sent. An admin will review it soon.</Text>
+              </>
+            ) : requestStatus === 'denied' ? (
+              <>
+                <Ionicons name="close-circle-outline" size={24} color={Colors.danger} />
+                <Text style={styles.requestTitle}>Request Denied</Text>
+                <Text style={styles.requestText}>Your access request was denied. You can submit a new one.</Text>
+                <TouchableOpacity style={styles.requestBtn} onPress={() => setRequestStatus('none')}>
+                  <Text style={styles.requestBtnText}>Request Again</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Ionicons name="lock-open-outline" size={24} color={Colors.primary} />
+                <Text style={styles.requestTitle}>Want to add recipes?</Text>
+                <Text style={styles.requestText}>Request member access to add, edit, and manage recipes.</Text>
+                <TextInput
+                  style={styles.requestInput}
+                  placeholder="Optional message (e.g. which family you're from)"
+                  placeholderTextColor={Colors.textSecondary}
+                  value={requestMessage}
+                  onChangeText={setRequestMessage}
+                  maxLength={200}
+                />
+                <TouchableOpacity
+                  style={styles.requestBtn}
+                  onPress={handleRequestAccess}
+                  disabled={requestStatus === 'sending'}
+                >
+                  {requestStatus === 'sending' ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={styles.requestBtnText}>Request Access</Text>
+                  )}
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
 
         {/* Stats */}
         <View style={styles.statsRow}>
@@ -370,7 +457,13 @@ export default function ProfileScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => setMode(mode === 'login' ? 'signup' : 'login')}>
+        {authMessage ? (
+          <View style={styles.authMessageBox}>
+            <Text style={styles.authMessageText}>{authMessage}</Text>
+          </View>
+        ) : null}
+
+        <TouchableOpacity onPress={() => { setMode(mode === 'login' ? 'signup' : 'login'); setAuthMessage(''); }}>
           <Text style={styles.switchText}>
             {mode === 'login'
               ? "Don't have an account? Sign up"
@@ -429,6 +522,39 @@ const styles = StyleSheet.create({
   },
   roleBadgeText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
   memberSince: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
+
+  // Access request
+  requestCard: {
+    alignItems: 'center',
+    backgroundColor: Colors.secondary,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
+    padding: 20,
+    gap: 8,
+  },
+  requestTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
+  requestText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  requestInput: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.text,
+    marginTop: 4,
+  },
+  requestBtn: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  requestBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
 
   // Stats
   statsRow: {
@@ -557,6 +683,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   buttonText: { color: '#FFF', fontWeight: '700', fontSize: 16 },
+  authMessageBox: {
+    backgroundColor: Colors.secondary,
+    borderRadius: 8,
+    padding: 12,
+  },
+  authMessageText: {
+    fontSize: 14,
+    color: Colors.text,
+    textAlign: 'center',
+  },
   switchText: {
     textAlign: 'center',
     color: Colors.primary,

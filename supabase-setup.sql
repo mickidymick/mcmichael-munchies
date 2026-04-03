@@ -122,7 +122,33 @@ CREATE POLICY "Members can delete any recipe"
     (SELECT role FROM profiles WHERE id = auth.uid()) IN ('member', 'admin')
   );
 
--- 7. Review queue for bulk-imported recipes
+-- 7. Access requests
+CREATE TABLE IF NOT EXISTS access_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  message TEXT,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'denied')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, status)
+);
+
+ALTER TABLE access_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own requests"
+  ON access_requests FOR SELECT USING (
+    auth.uid() = user_id OR
+    (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'
+  );
+
+CREATE POLICY "Users can insert their own requests"
+  ON access_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Admins can update requests"
+  ON access_requests FOR UPDATE USING (
+    (SELECT role FROM profiles WHERE id = auth.uid()) = 'admin'
+  );
+
+-- 8. Review queue for bulk-imported recipes
 CREATE TABLE IF NOT EXISTS review_queue (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
