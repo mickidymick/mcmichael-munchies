@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+import SearchBar from '../../components/SearchBar';
 import { useUserRole } from '../../lib/useUserRole';
 import FamilyBadge from '../../components/FamilyBadge';
 import { FAMILIES, CATEGORY_ICONS } from '../../constants/recipes';
@@ -108,55 +109,35 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <View style={styles.searchRow}>
-            <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search recipes..."
-              placeholderTextColor={Colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={() => {
-                if (searchQuery.trim()) {
-                  router.push({ pathname: '/browse', params: { query: searchQuery.trim() } });
-                  setSearchQuery('');
-                }
-              }}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => router.push({ pathname: '/browse', params: { query: searchQuery.trim() } })}>
-                <Ionicons name="arrow-forward-circle" size={24} color={Colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            navigateOnSelect
+            onSubmit={() => {
+              if (searchQuery.trim()) {
+                router.push({ pathname: '/browse', params: { query: searchQuery.trim() } });
+                setSearchQuery('');
+              }
+            }}
+          />
         </View>
       )}
 
       {/* Web search bar */}
       {Platform.OS === 'web' && (
         <View style={styles.webSearchContainer}>
-          <View style={[styles.searchRow, styles.webSearchRow]}>
-            <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search recipes..."
-              placeholderTextColor={Colors.textSecondary}
+          <View style={styles.webSearchRow}>
+            <SearchBar
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={() => {
+              navigateOnSelect
+              onSubmit={() => {
                 if (searchQuery.trim()) {
                   router.push({ pathname: '/browse', params: { query: searchQuery.trim() } });
                   setSearchQuery('');
                 }
               }}
-              returnKeyType="search"
             />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => router.push({ pathname: '/browse', params: { query: searchQuery.trim() } })}>
-                <Ionicons name="arrow-forward-circle" size={24} color={Colors.primary} />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
       )}

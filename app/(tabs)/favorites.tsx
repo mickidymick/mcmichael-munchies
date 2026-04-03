@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   Platform,
 } from 'react-native';
@@ -15,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
+import SearchBar from '../../components/SearchBar';
 import ChipRow from '../../components/ChipRow';
 import { SORT_OPTIONS, FAMILIES, CATEGORIES, CUISINES } from '../../constants/recipes';
 import { toggleMulti } from '../../lib/utils';
@@ -146,21 +146,12 @@ export default function FavoritesScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.heading}>Favorites</Text>
-        <View style={styles.searchRow}>
-          <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search favorites..."
-            placeholderTextColor={Colors.textSecondary}
-            value={query}
-            onChangeText={setQuery}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search favorites..."
+          navigateOnSelect
+        />
 
         <View style={styles.headerControls}>
           <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
@@ -253,18 +244,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: 10,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 15, color: Colors.text },
   headerControls: {
     flexDirection: 'row',
     alignItems: 'center',
