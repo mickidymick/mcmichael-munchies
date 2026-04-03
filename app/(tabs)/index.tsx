@@ -35,7 +35,7 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollPos = useRef(0);
   const hoveringRef = useRef(false);
-  const touchingRef = useRef(false);
+  const [autoScroll, setAutoScroll] = useState(true);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -69,12 +69,12 @@ export default function HomeScreen() {
     setLoading(false);
   }
 
-  // Auto-scroll carousel, pause on hover
+  // Auto-scroll carousel - interval only exists when autoScroll is true
   useEffect(() => {
-    if (carouselRecipes.length < 2) return;
+    if (!autoScroll || carouselRecipes.length < 2) return;
     const totalWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
     const interval = setInterval(() => {
-      if (hoveringRef.current || touchingRef.current) return;
+      if (hoveringRef.current) return;
       scrollPos.current += 1;
       if (scrollPos.current >= totalWidth) {
         scrollPos.current = 0;
@@ -84,7 +84,7 @@ export default function HomeScreen() {
       }
     }, 30);
     return () => clearInterval(interval);
-  }, [carouselRecipes.length, CARD_WIDTH]);
+  }, [autoScroll, carouselRecipes.length, CARD_WIDTH]);
 
   const carouselData = carouselRecipes.length >= 2
     ? [...carouselRecipes, ...carouselRecipes]
@@ -159,19 +159,17 @@ export default function HomeScreen() {
           contentContainerStyle={styles.carouselStripContent}
           decelerationRate="normal"
           onScrollBeginDrag={() => {
-            touchingRef.current = true;
+            setAutoScroll(false);
             if (resumeTimer.current) clearTimeout(resumeTimer.current);
           }}
           onMomentumScrollEnd={(e) => {
-            // Sync position after momentum finishes so auto-scroll continues from here
             scrollPos.current = e.nativeEvent.contentOffset.x;
-            resumeTimer.current = setTimeout(() => {
-              touchingRef.current = false;
-            }, 3000);
+            resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
           }}
           onScrollEndDrag={(e) => {
-            // Also sync on drag end in case there's no momentum
             scrollPos.current = e.nativeEvent.contentOffset.x;
+            // Resume after 3s in case there's no momentum phase
+            resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
           }}
         >
           {carouselData.map((item, index) => (
