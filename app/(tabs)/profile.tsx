@@ -113,7 +113,6 @@ export default function ProfileScreen() {
 
   function showMessage(msg: string) {
     setAuthMessage(msg);
-    if (Platform.OS === 'web') window.alert(msg);
   }
 
   async function handleLogin() {
