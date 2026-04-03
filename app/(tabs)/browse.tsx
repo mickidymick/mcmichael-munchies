@@ -79,7 +79,7 @@ export default function BrowseScreen() {
     if (reset) setLoading(true);
     else setLoadingMore(true);
 
-    const hasClientFilters = selectedCategories.length > 1 || debouncedQuery.trim() || selectedCookTimes.length > 0 || selectedDietary.length > 0;
+    const hasClientFilters = selectedCategories.length > 0 || debouncedQuery.trim() || selectedCookTimes.length > 0 || selectedDietary.length > 0;
     const fetchSize = hasClientFilters ? FETCH_SIZE : PAGE_SIZE;
     const from = pageNum * fetchSize;
     const to = from + fetchSize - 1;
@@ -97,18 +97,16 @@ export default function BrowseScreen() {
     } else if (selectedCuisines.length > 1) {
       req = req.in('cuisine', selectedCuisines);
     }
-    // Categories is a JSONB array - filter with contains for single, client-side for multi
-    if (selectedCategories.length === 1) {
-      req = req.contains('categories', [selectedCategories[0]]);
-    }
+    // Categories is a JSONB array - filter client-side for reliability
+    // (Supabase contains() with JSONB arrays can be inconsistent)
 
     req = req.order('title').range(from, to);
 
     const { data, count } = await req;
     let results = data ?? [];
 
-    // Client-side filtering for things Supabase can't do efficiently
-    if (selectedCategories.length > 1) {
+    // Client-side category filtering
+    if (selectedCategories.length > 0) {
       results = results.filter((r) =>
         selectedCategories.some((cat) => (r.categories ?? []).includes(cat))
       );
