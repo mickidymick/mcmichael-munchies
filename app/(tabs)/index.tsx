@@ -72,13 +72,15 @@ export default function HomeScreen() {
   // Auto-scroll carousel - interval only exists when autoScroll is true
   useEffect(() => {
     if (!autoScroll || carouselRecipes.length < 2) return;
-    const totalWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
+    // One full set width - when we pass this, wrap back seamlessly
+    const oneSetWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
     const interval = setInterval(() => {
       if (hoveringRef.current) return;
       scrollPos.current += 1;
-      if (scrollPos.current >= totalWidth) {
-        scrollPos.current = 0;
-        scrollRef.current?.scrollTo({ x: 0, animated: false });
+      // Wrap around using modulo so it works regardless of where user swiped to
+      if (scrollPos.current >= oneSetWidth) {
+        scrollPos.current = scrollPos.current - oneSetWidth;
+        scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
       } else {
         scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
       }
