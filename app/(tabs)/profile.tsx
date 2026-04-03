@@ -124,19 +124,6 @@ export default function ProfileScreen() {
     setAuthMessage(msg);
   }
 
-  async function handleResetPassword() {
-    if (!email.trim()) {
-      showMessage('Enter your email address first, then tap "Forgot password?"');
-      return;
-    }
-    setSubmitting(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: 'https://mcmichael-munchies.com/profile',
-    });
-    if (error) showMessage(error.message);
-    else showMessage('Password reset email sent! Check your inbox.');
-    setSubmitting(false);
-  }
 
   async function handleLogin() {
     setAuthMessage('');
@@ -509,7 +496,7 @@ export default function ProfileScreen() {
         />
 
         {mode === 'login' && (
-          <TouchableOpacity onPress={handleResetPassword}>
+          <TouchableOpacity onPress={() => router.push('/forgot-password')}>
             <Text style={styles.forgotText}>Forgot password?</Text>
           </TouchableOpacity>
         )}

@@ -109,6 +109,22 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="forgot-password"
+          options={{
+            headerShown: true,
+            headerTitle: '',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="reset-password"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="pending-requests"
           options={{
             headerShown: true,
