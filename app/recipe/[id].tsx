@@ -95,55 +95,25 @@ export default function RecipeDetailScreen() {
 
   function handlePrint() {
     if (Platform.OS !== 'web' || !recipe) return;
-    const title = esc(recipe.title);
-    const meta = [recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter((s): s is string => !!s).map(esc).join(' &middot; ');
-    const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${title}</title>
-<style>
-  body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 40px 20px; color: #333; }
-  h1 { margin-bottom: 4px; }
-  .meta { color: #777; font-size: 14px; margin-bottom: 16px; }
-  .info { display: flex; gap: 24px; margin-bottom: 16px; padding: 12px; background: #f9f6f1; border-radius: 8px; }
-  .info div { text-align: center; }
-  .info .label { font-size: 11px; color: #999; text-transform: uppercase; }
-  .info .value { font-size: 16px; font-weight: bold; }
-  .notes { background: #fff3e0; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-style: italic; }
-  h2 { border-bottom: 2px solid #c47c30; padding-bottom: 6px; margin-top: 24px; }
-  ul { padding-left: 20px; }
-  li { margin-bottom: 6px; line-height: 1.5; }
-  ol li { margin-bottom: 12px; line-height: 1.6; }
-  @media print { body { padding: 0; } }
-</style></head><body>
-<h1>${title}</h1>
-<div class="meta">${meta}</div>
-${recipe.description ? `<p>${esc(recipe.description)}</p>` : ''}
-${(recipe.prep_time || recipe.cook_time || recipe.servings) ? `<div class="info">
-  ${recipe.prep_time != null ? `<div><div class="label">Prep</div><div class="value">${recipe.prep_time} min</div></div>` : ''}
-  ${recipe.cook_time != null ? `<div><div class="label">Cook</div><div class="value">${recipe.cook_time} min</div></div>` : ''}
-  ${recipe.servings != null ? `<div><div class="label">Servings</div><div class="value">${recipe.servings}</div></div>` : ''}
-</div>` : ''}
-${recipe.notes ? `<div class="notes">${esc(recipe.notes)}</div>` : ''}
-${recipe.ingredients?.length ? `<h2>Ingredients</h2><ul>${recipe.ingredients.map((ing) =>
-  `<li>${[ing.amount, ing.unit, ing.item].filter(Boolean).map(esc).join(' ')}</li>`
-).join('')}</ul>` : ''}
-${recipe.steps?.length ? `<h2>Instructions</h2><ol>${recipe.steps
-  .sort((a, b) => a.order - b.order)
-  .map((s) => `<li>${esc(s.instruction)}</li>`).join('')}</ol>` : ''}
-</body></html>`;
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
-      };
-    } else {
-      Alert.alert(
-        'Popup blocked',
-        'Your browser blocked the print window. Please allow popups for this site and try again.'
-      );
+    // Inject print-only styles, then trigger browser print
+    const styleId = 'print-recipe-style';
+    let style = document.getElementById(styleId) as HTMLStyleElement | null;
+    if (!style) {
+      style = document.createElement('style');
+      style.id = styleId;
+      document.head.appendChild(style);
     }
+    style.textContent = `
+      @media print {
+        body * { visibility: hidden; }
+        #recipe-printable, #recipe-printable * { visibility: visible; }
+        #recipe-printable {
+          position: absolute; left: 0; top: 0; width: 100%;
+          font-family: Georgia, serif; padding: 20px; color: #333;
+        }
+      }
+    `;
+    window.print();
   }
 
   if (loading) {
@@ -180,7 +150,7 @@ ${recipe.steps?.length ? `<h2>Instructions</h2><ol>${recipe.steps
         <View style={[styles.heroImage, styles.heroPlaceholder]} />
       )}
 
-      <View style={styles.body}>
+      <View style={styles.body} nativeID="recipe-printable">
         {/* Title row */}
         <View style={styles.titleRow}>
           <View style={styles.titleWithBadge}>
