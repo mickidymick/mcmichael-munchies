@@ -4,9 +4,11 @@ import {
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, createElement } from 'react';
+import { createPortal } from 'react-dom';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient } from '../lib/supabase';
@@ -75,6 +77,8 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
   const [allSuggestions, setAllSuggestions] = useState<Suggestion[]>([]);
   const [focused, setFocused] = useState(false);
   const blurTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef = useRef<View>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     loadSuggestions().then(setAllSuggestions);
@@ -85,6 +89,25 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
     ? allSuggestions.filter((s) => s.label.toLowerCase().includes(query)).slice(0, 8)
     : [];
 
+  const showDropdown = focused && filtered.length > 0;
+
+  // Measure input position for portal dropdown
+  const measureInput = useCallback(() => {
+    if (Platform.OS !== 'web' || !inputRef.current) return;
+    const el = inputRef.current as unknown as HTMLElement;
+    if (!el?.getBoundingClientRect) return;
+    const rect = el.getBoundingClientRect();
+    setDropdownPos({
+      top: rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (showDropdown) measureInput();
+  }, [showDropdown, measureInput]);
+
   function handleSelect(item: Suggestion) {
     if (item.type === 'recipe' && item.id && navigateOnSelect) {
       router.push(`/recipe/${item.id}`);
@@ -94,9 +117,48 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
     setFocused(false);
   }
 
+  const dropdownContent = showDropdown && dropdownPos ? (
+    createElement('div', {
+      style: {
+        position: 'fixed' as const,
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        width: dropdownPos.width,
+        zIndex: 99999,
+        backgroundColor: '#fff',
+        border: `1px solid ${Colors.border}`,
+        borderRadius: 10,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        overflow: 'hidden',
+      },
+    },
+    filtered.map((item, i) =>
+      createElement('div', {
+        key: `${item.type}-${item.label}-${i}`,
+        style: {
+          display: 'flex',
+          flexDirection: 'row' as const,
+          alignItems: 'center',
+          gap: 8,
+          padding: '10px 12px',
+          borderBottom: i < filtered.length - 1 ? `1px solid ${Colors.border}` : 'none',
+          cursor: 'pointer',
+        },
+        onMouseDown: (e: any) => {
+          e.preventDefault();
+          handleSelect(item);
+        },
+      },
+        createElement(Ionicons, { name: ICONS[item.type], size: 14, color: Colors.textSecondary }),
+        createElement('span', { style: { flex: 1, fontSize: 14, color: Colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.label),
+        createElement('span', { style: { fontSize: 11, color: Colors.textSecondary, textTransform: 'capitalize' } }, item.type),
+      )
+    ))
+  ) : null;
+
   return (
     <View style={styles.container}>
-      <View style={styles.searchRow}>
+      <View ref={inputRef} style={styles.searchRow}>
         <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.icon} />
         <TextInput
           style={styles.input}
@@ -104,7 +166,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           placeholderTextColor={Colors.textSecondary}
           value={value}
           onChangeText={onChangeText}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); measureInput(); }}
           onBlur={() => { blurTimeout.current = setTimeout(() => setFocused(false), 200); }}
           onSubmitEditing={onSubmit}
           returnKeyType="search"
@@ -115,30 +177,15 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           </TouchableOpacity>
         )}
       </View>
-      {focused && filtered.length > 0 && (
-        <View style={styles.dropdown}>
-          {filtered.map((item, i) => (
-            <TouchableOpacity
-              key={`${item.type}-${item.label}-${i}`}
-              style={styles.suggestion}
-              onPress={() => {
-                if (blurTimeout.current) clearTimeout(blurTimeout.current);
-                handleSelect(item);
-              }}
-            >
-              <Ionicons name={ICONS[item.type]} size={14} color={Colors.textSecondary} />
-              <Text style={styles.suggestionText} numberOfLines={1}>{item.label}</Text>
-              <Text style={styles.suggestionType}>{item.type}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
+      {Platform.OS === 'web' && dropdownContent
+        ? createPortal(dropdownContent, document.body)
+        : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { position: 'relative', zIndex: 9999 },
+  container: { position: 'relative' },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -151,33 +198,4 @@ const styles = StyleSheet.create({
   },
   icon: { marginRight: 6 },
   input: { flex: 1, fontSize: 15, color: Colors.text },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    marginTop: 4,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 10,
-    zIndex: 9999,
-  },
-  suggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  suggestionText: { flex: 1, fontSize: 14, color: Colors.text },
-  suggestionType: { fontSize: 11, color: Colors.textSecondary, textTransform: 'capitalize' },
 });
