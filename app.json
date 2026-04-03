@@ -25,7 +25,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "icon": "./assets/apple-touch-icon.png"
     },
     "scheme": "mcmichael-munchies",
     "plugins": [
