@@ -5,6 +5,27 @@ import { useFonts, Pacifico_400Regular } from '@expo-google-fonts/pacifico';
 import { useEffect } from 'react';
 import { Colors } from '../constants/colors';
 import NavBar from '../components/NavBar';
+import { supabase } from '../lib/supabase';
+import { useRouter } from 'expo-router';
+
+function usePasswordRecoveryRedirect() {
+  const router = useRouter();
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        router.replace('/reset-password');
+      }
+      if (event === 'SIGNED_IN') {
+        // After email confirmation, send to profile
+        const hash = Platform.OS === 'web' ? window.location.hash : '';
+        if (hash.includes('type=signup') || hash.includes('type=email')) {
+          router.replace('/(tabs)/profile');
+        }
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, [router]);
+}
 
 function useWebMeta() {
   useEffect(() => {
@@ -49,6 +70,7 @@ export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Pacifico_400Regular });
   useWebMeta();
   useWebHoverStyles();
+  usePasswordRecoveryRedirect();
 
   if (!fontsLoaded) return null;
 
