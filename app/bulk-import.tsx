@@ -16,6 +16,7 @@ import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
+import { invalidateSearchCache } from '../components/SearchBar';
 
 type ImportedRecipe = {
   title: string;
@@ -194,6 +195,7 @@ export default function BulkImportScreen() {
     }
 
     setSavedIds(newSavedIds);
+    if (newSavedIds.length > 0) invalidateSearchCache();
     setSaving(false);
   }
 
@@ -219,9 +221,18 @@ export default function BulkImportScreen() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16 }}>
-          Account Pending Approval
+        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
+          Member Access Required
         </Text>
+        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+          You need member access to import recipes. You can request access from your profile page.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          onPress={() => router.push('/(tabs)/profile')}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -314,14 +325,15 @@ export default function BulkImportScreen() {
       <View style={styles.instructionCard}>
         <View style={styles.instructionHeader}>
           <Ionicons name="book-outline" size={24} color={Colors.primary} />
-          <Text style={styles.instructionTitle}>Bulk Import from Cookbook</Text>
+          <Text style={styles.instructionTitle}>Import Recipes from Photos</Text>
         </View>
         <Text style={styles.instructionText}>
-          1. Copy the prompt below{'\n'}
-          2. Open Claude (claude.ai) and paste it{'\n'}
-          3. Attach photos of your cookbook pages{'\n'}
-          4. Claude will return JSON - copy it{'\n'}
-          5. Paste the JSON below and click Parse & Import
+          1. Copy the prompt below using the Copy button{'\n'}
+          2. Go to claude.ai and start a new chat{'\n'}
+          3. Paste the prompt and attach photos of your cookbook pages{'\n'}
+          4. Claude will read the recipes and give you formatted text{'\n'}
+          5. Copy all of Claude's response{'\n'}
+          6. Come back here, paste it in the box below, and hit Import
         </Text>
       </View>
 
@@ -346,10 +358,10 @@ export default function BulkImportScreen() {
       </View>
 
       {/* JSON input */}
-      <Text style={styles.pasteLabel}>Paste JSON from Claude</Text>
+      <Text style={styles.pasteLabel}>Paste Claude's response here</Text>
       <TextInput
         style={styles.jsonInput}
-        placeholder='Paste the JSON array here...'
+        placeholder='Paste everything Claude gave you here...'
         placeholderTextColor={Colors.textSecondary}
         value={jsonInput}
         onChangeText={(v) => {
@@ -373,7 +385,7 @@ export default function BulkImportScreen() {
         disabled={!jsonInput.trim()}
       >
         <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
-        <Text style={styles.parseBtnText}>Parse & Import</Text>
+        <Text style={styles.parseBtnText}>Import Recipes</Text>
       </TouchableOpacity>
     </ScrollView>
   );

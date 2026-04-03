@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { memo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { Recipe } from '../lib/supabase';
 import FamilyBadge from './FamilyBadge';
@@ -33,7 +34,9 @@ export default memo(function RecipeCard({ recipe }: Props) {
           accessibilityLabel={`Photo of ${recipe.title}`}
         />
       ) : (
-        <View style={[styles.cardImage, styles.imagePlaceholder]} />
+        <View style={[styles.cardImage, styles.imagePlaceholder]}>
+          <Ionicons name="restaurant-outline" size={24} color={Colors.textSecondary} />
+        </View>
       )}
       <View style={styles.cardInfo}>
         <View style={styles.cardTitleRow}>
@@ -67,7 +70,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   cardImage: { width: 90, height: 90 },
-  imagePlaceholder: { backgroundColor: Colors.border },
+  imagePlaceholder: { backgroundColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1, padding: 12, justifyContent: 'center', gap: 3 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },

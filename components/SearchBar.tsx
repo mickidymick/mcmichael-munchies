@@ -29,6 +29,10 @@ type Suggestion = {
 
 let cachedSuggestions: Suggestion[] | null = null;
 
+export function invalidateSearchCache() {
+  cachedSuggestions = null;
+}
+
 async function loadSuggestions(): Promise<Suggestion[]> {
   if (cachedSuggestions) return cachedSuggestions;
 

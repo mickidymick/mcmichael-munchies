@@ -30,6 +30,7 @@ export default function RecipeDetailScreen() {
   const [error, setError] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -78,7 +79,10 @@ export default function RecipeDetailScreen() {
     } else {
       await supabase.from('favorites').insert({ user_id: userId, recipe_id: id });
     }
-    setIsFavorite(!isFavorite);
+    const newVal = !isFavorite;
+    setIsFavorite(newVal);
+    setToast(newVal ? 'Added to favorites' : 'Removed from favorites');
+    setTimeout(() => setToast(''), 2000);
   }
 
   async function handleCopyLink() {
@@ -307,6 +311,11 @@ export default function RecipeDetailScreen() {
         <Ionicons name="arrow-up" size={18} color="#FFF" />
       </TouchableOpacity>
     )}
+    {toast ? (
+      <View style={styles.toast}>
+        <Text style={styles.toastText}>{toast}</Text>
+      </View>
+    ) : null}
     {showDeleteConfirm && (
       <View style={styles.deleteOverlay}>
         <View style={styles.deleteModal}>
@@ -484,6 +493,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteModalConfirmText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+  toast: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    zIndex: 50,
+  },
+  toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
   scrollTopBtn: {
     position: 'absolute',
     bottom: 24,

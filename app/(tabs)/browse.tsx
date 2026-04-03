@@ -15,6 +15,7 @@ import { Colors, Layout } from '../../constants/colors';
 const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { supabase, Recipe } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
+import { useUserRole } from '../../lib/useUserRole';
 import SearchBar from '../../components/SearchBar';
 import ChipRow from '../../components/ChipRow';
 import { FAMILIES, CATEGORIES, CUISINES, COOK_TIMES, SORT_OPTIONS, DIETARY_TAGS } from '../../constants/recipes';
@@ -26,6 +27,7 @@ const FETCH_SIZE = 40;
 
 export default function BrowseScreen() {
   const router = useRouter();
+  const { isMemberOrAdmin } = useUserRole();
   const params = useLocalSearchParams<{ category?: string; query?: string; family?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(params.category ? [params.category] : []);
@@ -254,9 +256,13 @@ export default function BrowseScreen() {
             {totalInDb === 0 ? 'No recipes yet.' : 'No recipes match your filters.'}
           </Text>
           {totalInDb === 0 ? (
-            <TouchableOpacity onPress={() => router.push('/add-recipe')}>
-              <Text style={styles.emptyLink}>Add the first one</Text>
-            </TouchableOpacity>
+            isMemberOrAdmin ? (
+              <TouchableOpacity onPress={() => router.push('/add-recipe')}>
+                <Text style={styles.emptyLink}>Add the first recipe</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.emptySubtext}>Recipes will appear here once members start adding them.</Text>
+            )
           ) : (
             <TouchableOpacity onPress={() => {
               setSelectedFamilies([]);
@@ -354,6 +360,7 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyText: { fontSize: 16, color: Colors.textSecondary },
   emptyLink: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
+  emptySubtext: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
   resultCount: {
     fontSize: 13,
     color: Colors.textSecondary,

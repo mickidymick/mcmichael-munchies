@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import DraggableRow from '../../components/DraggableRow';
+import { invalidateSearchCache } from '../../components/SearchBar';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
@@ -315,9 +316,9 @@ export default function EditRecipeScreen() {
       notes: notes.trim() || null,
       categories,
       family: family || null,
-      prep_time: prepTime ? parseInt(prepTime, 10) : null,
-      cook_time: cookTime ? parseInt(cookTime, 10) : null,
-      servings: servings ? parseInt(servings, 10) : null,
+      prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
+      cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
+      servings: servings ? Math.max(1, Math.min(parseInt(servings, 10) || 1, 999)) : null,
       estimated_calories: calories,
       cuisine,
       tags,
@@ -329,6 +330,7 @@ export default function EditRecipeScreen() {
     setSaving(false);
     if (error) { Alert.alert('Error saving recipe', error.message); return; }
     invalidateAutocompleteCache();
+    invalidateSearchCache();
     dirtyRef.current = false;
     router.replace(`/recipe/${id}`);
   }
@@ -344,11 +346,17 @@ export default function EditRecipeScreen() {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
         <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
-          Account Pending Approval
+          Member Access Required
         </Text>
         <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
-          Your account needs to be approved by an admin before you can edit recipes. Ask Zach to approve you as a family member.
+          You need member access to edit recipes. You can request access from your profile page.
         </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          onPress={() => router.push('/(tabs)/profile')}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
+        </TouchableOpacity>
       </View>
     );
   }

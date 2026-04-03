@@ -21,6 +21,7 @@ import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
+import { invalidateSearchCache } from '../components/SearchBar';
 import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../constants/recipes';
 
 export default function AddRecipeScreen() {
@@ -308,9 +309,9 @@ export default function AddRecipeScreen() {
       notes: notes.trim() || null,
       categories,
       family: family || null,
-      prep_time: prepTime ? parseInt(prepTime, 10) : null,
-      cook_time: cookTime ? parseInt(cookTime, 10) : null,
-      servings: servings ? parseInt(servings, 10) : null,
+      prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
+      cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
+      servings: servings ? Math.max(1, Math.min(parseInt(servings, 10) || 1, 999)) : null,
       estimated_calories: calories,
       cuisine,
       tags,
@@ -324,6 +325,7 @@ export default function AddRecipeScreen() {
 
     if (error) { Alert.alert('Error saving recipe', error.message); return; }
     invalidateAutocompleteCache();
+    invalidateSearchCache();
     dirtyRef.current = false;
     router.replace(`/recipe/${data.id}`);
   }
@@ -339,11 +341,17 @@ export default function AddRecipeScreen() {
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
         <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
-          Account Pending Approval
+          Member Access Required
         </Text>
         <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
-          Your account needs to be approved by an admin before you can add recipes. Ask Zach to approve you as a family member.
+          You need member access to add recipes. You can request access from your profile page.
         </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          onPress={() => router.push('/(tabs)/profile')}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
+        </TouchableOpacity>
       </View>
     );
   }
