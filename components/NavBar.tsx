@@ -132,6 +132,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
+    zIndex: 1000,
   },
   inner: {
     flexDirection: 'row',
@@ -194,8 +195,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 5,
-    zIndex: 100,
+    elevation: 10,
+    zIndex: 9999,
   },
   dropdownItem: {
     flexDirection: 'row',
