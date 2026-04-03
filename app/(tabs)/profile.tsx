@@ -111,18 +111,29 @@ export default function ProfileScreen() {
 
   const [authMessage, setAuthMessage] = useState('');
 
+  function showMessage(msg: string) {
+    setAuthMessage(msg);
+    if (Platform.OS === 'web') window.alert(msg);
+  }
+
   async function handleLogin() {
     setAuthMessage('');
     setSubmitting(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthMessage(error.message);
+    if (error) {
+      if (error.message.includes('Email not confirmed')) {
+        showMessage('Please check your email and click the confirmation link before signing in.');
+      } else {
+        showMessage(error.message);
+      }
+    }
     setSubmitting(false);
   }
 
   async function handleSignup() {
     setAuthMessage('');
     if (!name.trim()) {
-      setAuthMessage('Please enter your name.');
+      showMessage('Please enter your name.');
       return;
     }
     setSubmitting(true);
@@ -131,9 +142,9 @@ export default function ProfileScreen() {
       password,
       options: { data: { full_name: name } },
     });
-    if (error) setAuthMessage(error.message);
+    if (error) showMessage(error.message);
     else {
-      setAuthMessage('Account created! Check your email for a confirmation link, then sign in.');
+      showMessage('Account created! Check your email for a confirmation link, then sign in.');
       setMode('login');
     }
     setSubmitting(false);
