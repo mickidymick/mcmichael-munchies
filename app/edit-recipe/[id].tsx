@@ -31,6 +31,7 @@ export default function EditRecipeScreen() {
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -98,8 +99,9 @@ export default function EditRecipeScreen() {
 
   // Load recipe
   useEffect(() => {
-    supabase.from('recipes').select('*').eq('id', id).single().then(({ data }) => {
-      if (!data) return;
+    setLoadError(false);
+    supabase.from('recipes').select('*').eq('id', id).single().then(({ data, error }) => {
+      if (error || !data) { setLoadError(true); setLoading(false); return; }
       setTitle(data.title);
       setDescription(data.description ?? '');
       setNotes(data.notes ?? '');
@@ -278,10 +280,11 @@ export default function EditRecipeScreen() {
     }
 
     const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-    const path = `${name}.${fileExt}`;
+    const unique = `${name}-${crypto.randomUUID()}`;
+    const path = `${unique}.${fileExt}`;
     const { error } = await supabase.storage
       .from('recipe-images')
-      .upload(path, blob, { contentType: mimeType, upsert: true });
+      .upload(path, blob, { contentType: mimeType });
     if (error) { Alert.alert('Image upload failed', error.message); return null; }
     const { data } = supabase.storage.from('recipe-images').getPublicUrl(path);
     return data.publicUrl;
@@ -318,7 +321,7 @@ export default function EditRecipeScreen() {
       family: family || null,
       prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
       cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
-      servings: servings ? Math.max(1, Math.min(parseInt(servings, 10) || 1, 999)) : null,
+      servings: servings.trim() || null,
       estimated_calories: calories,
       cuisine,
       tags,
@@ -332,13 +335,34 @@ export default function EditRecipeScreen() {
     invalidateAutocompleteCache();
     invalidateSearchCache();
     dirtyRef.current = false;
-    router.replace(`/recipe/${id}`);
+    if (router.canGoBack()) router.back();
+    else router.replace(`/recipe/${id}`);
   }
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   if (loading || roleLoading) {
     return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+  }
+
+  if (loadError) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.danger} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16 }}>
+          Failed to load recipe
+        </Text>
+        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+          The recipe could not be found or there was an error loading it.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          onPress={() => router.back()}
+        >
+          <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
   }
 
   if (!isMemberOrAdmin) {
@@ -375,6 +399,12 @@ export default function EditRecipeScreen() {
             </View>
           )}
         </TouchableOpacity>
+        {heroImage && (
+          <TouchableOpacity style={styles.removeImageBtn} onPress={() => setHeroImage(null)}>
+            <Ionicons name="close-circle" size={16} color={Colors.danger} />
+            <Text style={styles.removeImageText}>Remove photo</Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.label}>Title *</Text>
         <TextInput style={styles.input} placeholder="e.g. Grandma's Apple Pie" placeholderTextColor={Colors.textSecondary} value={title} onChangeText={setTitle} maxLength={200} />
@@ -457,7 +487,7 @@ export default function EditRecipeScreen() {
           </View>
           <View style={styles.timeField}>
             <Text style={styles.label}>Servings</Text>
-            <TextInput style={styles.input} placeholder="e.g. 4" placeholderTextColor={Colors.textSecondary} value={servings} onChangeText={setServings} keyboardType="numeric" />
+            <TextInput style={styles.input} placeholder="e.g. 4 or 4-6" placeholderTextColor={Colors.textSecondary} value={servings} onChangeText={setServings} />
           </View>
         </View>
 
@@ -571,7 +601,19 @@ export default function EditRecipeScreen() {
             </View>
             <TextInput style={[styles.input, styles.multiline]} placeholder="Describe this step..." placeholderTextColor={Colors.textSecondary} value={step.instruction} onChangeText={(v) => updateStep(i, v)} multiline numberOfLines={3} />
             {step.image_url ? (
-              <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />
+              <View>
+                <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />
+                <View style={styles.stepImageActions}>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, image_url: undefined } : s))}>
+                    <Ionicons name="close-circle" size={16} color={Colors.danger} />
+                    <Text style={styles.removeImageText}>Remove</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => pickStepImage(i)}>
+                    <Ionicons name="swap-horizontal" size={16} color={Colors.primary} />
+                    <Text style={[styles.removeImageText, { color: Colors.primary }]}>Replace</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             ) : (
               <TouchableOpacity style={styles.stepImageBtn} onPress={() => pickStepImage(i)}>
                 <Ionicons name="image-outline" size={18} color={Colors.textSecondary} />
@@ -602,6 +644,8 @@ const styles = StyleSheet.create({
   heroPreview: { width: '100%', height: 200 },
   heroPlaceholder: { height: 180, backgroundColor: Colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed' },
   heroPlaceholderText: { fontSize: 14, color: Colors.textSecondary },
+  removeImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
+  removeImageText: { fontSize: 13, color: Colors.danger },
   label: { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 6, marginTop: 14 },
   sectionHeader: { fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 28, marginBottom: 12, paddingBottom: 8, borderBottomWidth: 2, borderBottomColor: Colors.primary },
   input: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: Colors.text },
@@ -650,6 +694,7 @@ const styles = StyleSheet.create({
   stepImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
   stepImageBtnText: { fontSize: 13, color: Colors.textSecondary },
   stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
+  stepImageActions: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 4 },
   saveButton: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 32 },
   saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },
   suggestionsBox: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderRadius: 8, marginTop: 4, overflow: 'hidden' },

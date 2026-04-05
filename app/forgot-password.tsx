@@ -27,7 +27,7 @@ export default function ForgotPasswordScreen() {
     setError('');
     setSubmitting(true);
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${Platform.OS === 'web' ? window.location.origin : 'https://mcmichael-munchies.com'}/reset-password`,
+      redirectTo: `${Platform.OS === 'web' ? window.location.origin : (process.env.EXPO_PUBLIC_SITE_URL ?? 'https://mcmichael-munchies.com')}/reset-password`,
     });
     if (err) setError(err.message);
     else setSent(true);

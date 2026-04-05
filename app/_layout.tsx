@@ -5,6 +5,7 @@ import { useFonts, Pacifico_400Regular } from '@expo-google-fonts/pacifico';
 import { useEffect } from 'react';
 import { Colors } from '../constants/colors';
 import NavBar from '../components/NavBar';
+import ErrorBoundary from '../components/ErrorBoundary';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 
@@ -68,6 +69,7 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    <ErrorBoundary>
     <View style={{ flex: 1 }}>
       <StatusBar style="dark" />
       {Platform.OS === 'web' && <NavBar />}
@@ -114,10 +116,10 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="bulk-import"
+          name="auto-import"
           options={{
             headerShown: true,
-            headerTitle: 'Bulk Import',
+            headerTitle: 'Auto Import',
             headerBackTitle: 'Back',
             headerStyle: { backgroundColor: Colors.background },
             headerTintColor: Colors.primary,
@@ -161,5 +163,6 @@ export default function RootLayout() {
         />
       </Stack>
     </View>
+    </ErrorBoundary>
   );
 }

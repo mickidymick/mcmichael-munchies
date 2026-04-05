@@ -27,7 +27,7 @@ type Mode = 'login' | 'signup';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { role, isAdmin, isMemberOrAdmin } = useUserRole();
+  const { role, isAdmin, isMemberOrAdmin, refresh: refreshRole } = useUserRole();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('login');
@@ -55,50 +55,45 @@ export default function ProfileScreen() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
-    return () => listener.subscription.unsubscribe();
+
+    // Real-time subscription for access requests so admin sees new requests immediately
+    const channel = supabase
+      .channel('access-requests-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, () => {
+        refreshStats();
+      })
+      .subscribe();
+
+    return () => {
+      listener.subscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  // Reload stats every time profile tab gets focus
+  async function refreshStats() {
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) return;
+    const [recipesRes, favoritesRes, reviewRes, pendingRes, requestRes] = await Promise.all([
+      supabase.from('recipes').select('id', { count: 'exact', head: true }).eq('created_by', currentUser.id),
+      supabase.from('favorites').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+      supabase.from('review_queue').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+      supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('access_requests').select('status').eq('user_id', currentUser.id).in('status', ['pending', 'denied']).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    ]);
+    if (recipesRes.count !== null) setRecipesAdded(recipesRes.count);
+    if (favoritesRes.count !== null) setFavoritesCount(favoritesRes.count);
+    if (reviewRes.count !== null) setReviewCount(reviewRes.count);
+    if (pendingRes.count !== null) setPendingRequestCount(pendingRes.count);
+    if (requestRes.data) setRequestStatus(requestRes.data.status as 'pending' | 'denied');
+    else setRequestStatus('none');
+  }
+
+  // Reload stats and role every time profile tab gets focus
   useFocusEffect(
     useCallback(() => {
       if (!user) return;
-      supabase
-        .from('recipes')
-        .select('id', { count: 'exact', head: true })
-        .eq('created_by', user.id)
-        .then(({ count }) => { if (count !== null) setRecipesAdded(count); });
-
-      supabase
-        .from('favorites')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .then(({ count }) => { if (count !== null) setFavoritesCount(count); });
-
-      supabase
-        .from('review_queue')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .then(({ count }) => { if (count !== null) setReviewCount(count); });
-
-      // Pending access requests count (admin only)
-      supabase
-        .from('access_requests')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .then(({ count }) => { if (count !== null) setPendingRequestCount(count); });
-
-      supabase
-        .from('access_requests')
-        .select('status')
-        .eq('user_id', user.id)
-        .in('status', ['pending', 'denied'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) setRequestStatus(data.status as 'pending' | 'denied');
-          else setRequestStatus('none');
-        });
+      refreshRole();
+      refreshStats();
     }, [user])
   );
 
@@ -115,6 +110,7 @@ export default function ProfileScreen() {
     } else {
       setRequestStatus('pending');
       setRequestMessage('');
+      Alert.alert('Request Sent', 'Your access request has been submitted. You will be notified when an admin reviews it.');
     }
   }
 
@@ -145,6 +141,10 @@ export default function ProfileScreen() {
       showMessage('Please enter your name.');
       return;
     }
+    if (password.length < 8) {
+      showMessage('Password must be at least 8 characters.');
+      return;
+    }
     setSubmitting(true);
     const { error } = await supabase.auth.signUp({
       email,
@@ -172,7 +172,8 @@ export default function ProfileScreen() {
   }
 
   async function handleLogout() {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) Alert.alert('Sign out failed', error.message);
   }
 
   function formatDate(dateStr: string) {
@@ -314,7 +315,7 @@ export default function ProfileScreen() {
 
               <TouchableOpacity
                 style={styles.actionRow}
-                onPress={() => router.push('/bulk-import')}
+                onPress={() => router.push('/auto-import')}
                 // @ts-ignore
                 dataSet={{ hover: 'family' }}
               >
@@ -322,8 +323,8 @@ export default function ProfileScreen() {
                   <Ionicons name="documents-outline" size={22} color={Colors.primary} />
                 </View>
                 <View style={styles.actionTextCol}>
-                  <Text style={styles.actionTitle}>Bulk Import</Text>
-                  <Text style={styles.actionDesc}>Import recipes from a cookbook using Claude</Text>
+                  <Text style={styles.actionTitle}>Auto Import</Text>
+                  <Text style={styles.actionDesc}>Import recipes from a cookbook using AI</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
               </TouchableOpacity>

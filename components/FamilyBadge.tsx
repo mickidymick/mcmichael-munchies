@@ -4,6 +4,7 @@ const FAMILY_CONFIG: Record<string, { letter: string; bg: string; color: string 
   "McMichael's": { letter: 'M', bg: '#2E86AB', color: '#FFF' },
   "Knepp's": { letter: 'K', bg: '#A23B72', color: '#FFF' },
   "Elmore's": { letter: 'E', bg: '#F18F01', color: '#FFF' },
+  "Ross's": { letter: 'R', bg: '#2D936C', color: '#FFF' },
 };
 
 type Props = {

@@ -53,6 +53,9 @@ export default function NavBar() {
                 key={link.label}
                 style={[styles.link, isActive && styles.linkActive]}
                 onPress={() => { router.push(link.href as any); setMenuOpen(false); }}
+                accessibilityRole="link"
+                accessibilityLabel={link.label}
+                accessibilityState={{ selected: isActive }}
                 // @ts-ignore
                 dataSet={{ hover: 'nav' }}
               >
@@ -89,10 +92,10 @@ export default function NavBar() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.dropdownItem}
-                    onPress={() => { router.push('/bulk-import'); setMenuOpen(false); }}
+                    onPress={() => { router.push('/auto-import'); setMenuOpen(false); }}
                   >
                     <Ionicons name="documents-outline" size={18} color={Colors.primary} />
-                    <Text style={styles.dropdownText}>Bulk Import</Text>
+                    <Text style={styles.dropdownText}>Auto Import</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -101,12 +104,12 @@ export default function NavBar() {
             <View style={styles.actionBtns}>
               <TouchableOpacity
                 style={styles.bulkBtn}
-                onPress={() => router.push('/bulk-import')}
+                onPress={() => router.push('/auto-import')}
                 // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 <Ionicons name="documents-outline" size={16} color={Colors.primary} />
-                <Text style={styles.bulkBtnText}>Bulk Import</Text>
+                <Text style={styles.bulkBtnText}>Auto Import</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addBtn}

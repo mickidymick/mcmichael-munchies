@@ -38,7 +38,7 @@ export default function ReviewQueueScreen() {
 
       const { data, error: err } = await supabase
         .from('review_queue')
-        .select('id, recipe_id, created_at, recipes(*)')
+        .select('id, recipe_id, created_at, recipes(id,title,image_url,family,categories,cuisine)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true });
 
@@ -122,9 +122,9 @@ export default function ReviewQueueScreen() {
         <View style={styles.emptyButtons}>
           <TouchableOpacity
             style={styles.emptyBtn}
-            onPress={() => router.push('/bulk-import')}
+            onPress={() => router.push('/auto-import')}
           >
-            <Text style={styles.emptyBtnText}>Bulk Import</Text>
+            <Text style={styles.emptyBtnText}>Auto Import</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.emptyBtn, styles.emptyBtnOutline]}

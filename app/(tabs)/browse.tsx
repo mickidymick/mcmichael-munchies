@@ -7,8 +7,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../../constants/colors';
 
@@ -16,6 +16,7 @@ const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { supabase, Recipe } from '../../lib/supabase';
 import RecipeCard from '../../components/RecipeCard';
 import { useUserRole } from '../../lib/useUserRole';
+import { useFavorites } from '../../lib/useFavorites';
 import SearchBar from '../../components/SearchBar';
 import ChipRow from '../../components/ChipRow';
 import { FAMILIES, CATEGORIES, CUISINES, COOK_TIMES, SORT_OPTIONS, DIETARY_TAGS } from '../../constants/recipes';
@@ -28,6 +29,7 @@ const FETCH_SIZE = 40;
 export default function BrowseScreen() {
   const router = useRouter();
   const { isMemberOrAdmin } = useUserRole();
+  const { isFavorite } = useFavorites();
   const params = useLocalSearchParams<{ category?: string; query?: string; family?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(params.category ? [params.category] : []);
@@ -44,6 +46,7 @@ export default function BrowseScreen() {
   const [page, setPage] = useState(0);
   const [totalInDb, setTotalInDb] = useState(0);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
+  const fetchId = useRef(0);
 
   useEffect(() => {
     if (params.category && !selectedCategories.includes(params.category)) {
@@ -68,6 +71,13 @@ export default function BrowseScreen() {
     fetchRecipes(0, true);
   }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
 
+  // Refresh on focus to pick up new/edited recipes
+  useFocusEffect(
+    useCallback(() => {
+      fetchRecipes(0, true);
+    }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary])
+  );
+
 
   const activeFilterCount = [
     selectedFamilies.length > 0,
@@ -78,6 +88,7 @@ export default function BrowseScreen() {
   ].filter(Boolean).length;
 
   async function fetchRecipes(pageNum: number, reset: boolean) {
+    const currentFetchId = ++fetchId.current;
     if (reset) setLoading(true);
     else setLoadingMore(true);
 
@@ -86,7 +97,7 @@ export default function BrowseScreen() {
     const from = pageNum * fetchSize;
     const to = from + fetchSize - 1;
 
-    let req = supabase.from('recipes').select('*', { count: 'exact' });
+    let req = supabase.from('recipes').select('id,title,description,image_url,family,categories,cuisine,prep_time,cook_time,estimated_calories,tags,ingredients,created_at', { count: 'exact' });
 
     // Server-side filters where possible
     if (selectedFamilies.length === 1) {
@@ -99,12 +110,18 @@ export default function BrowseScreen() {
     } else if (selectedCuisines.length > 1) {
       req = req.in('cuisine', selectedCuisines);
     }
-    // Categories is a JSONB array - filter client-side for reliability
-    // (Supabase contains() with JSONB arrays can be inconsistent)
+    // Server-side text search on title/description
+    if (debouncedQuery.trim()) {
+      const q = debouncedQuery.trim();
+      req = req.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
+    }
 
+    // Categories is a JSONB array - filter client-side for reliability
     req = req.order('title').range(from, to);
 
     const { data, count } = await req;
+    // Ignore stale responses from superseded fetches
+    if (currentFetchId !== fetchId.current) return;
     let results = data ?? [];
 
     // Client-side category filtering
@@ -114,7 +131,7 @@ export default function BrowseScreen() {
       );
     }
 
-    // Text search
+    // Client-side search for tags and ingredients (title/description already filtered server-side)
     if (debouncedQuery.trim()) {
       const q = debouncedQuery.trim().toLowerCase();
       results = results.filter((r) => {
@@ -162,9 +179,9 @@ export default function BrowseScreen() {
     });
 
     if (reset) {
-      setRecipes(results);
+      setRecipes(results as Recipe[]);
     } else {
-      setRecipes((prev) => [...prev, ...results]);
+      setRecipes((prev) => [...prev, ...(results as Recipe[])]);
     }
 
     const totalFromDb = count ?? 0;
@@ -289,7 +306,7 @@ export default function BrowseScreen() {
           ListFooterComponent={
             loadingMore ? <ActivityIndicator style={{ paddingVertical: 16 }} color={Colors.primary} /> : null
           }
-          renderItem={({ item }) => <RecipeCard recipe={item} />}
+          renderItem={({ item }) => <RecipeCard recipe={item} isFavorited={isFavorite(item.id)} />}
         />
       )}
     </View>

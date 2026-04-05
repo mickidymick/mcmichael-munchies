@@ -251,11 +251,12 @@ export default function AddRecipeScreen() {
     }
 
     const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-    const path = `${name}.${fileExt}`;
+    const unique = `${name}-${crypto.randomUUID()}`;
+    const path = `${unique}.${fileExt}`;
 
     const { error } = await supabase.storage
       .from('recipe-images')
-      .upload(path, blob, { contentType: mimeType, upsert: true });
+      .upload(path, blob, { contentType: mimeType });
 
     if (error) {
       Alert.alert('Image upload failed', error.message);
@@ -311,7 +312,7 @@ export default function AddRecipeScreen() {
       family: family || null,
       prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
       cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
-      servings: servings ? Math.max(1, Math.min(parseInt(servings, 10) || 1, 999)) : null,
+      servings: servings.trim() || null,
       estimated_calories: calories,
       cuisine,
       tags,
@@ -374,6 +375,12 @@ export default function AddRecipeScreen() {
             </View>
           )}
         </TouchableOpacity>
+        {heroImage && (
+          <TouchableOpacity style={styles.removeImageBtn} onPress={() => setHeroImage(null)}>
+            <Ionicons name="close-circle" size={16} color={Colors.danger} />
+            <Text style={styles.removeImageText}>Remove photo</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Title */}
         <Text style={styles.label}>Title *</Text>
@@ -522,11 +529,10 @@ export default function AddRecipeScreen() {
             <Text style={styles.label}>Servings</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. 4"
+              placeholder="e.g. 4 or 4-6"
               placeholderTextColor={Colors.textSecondary}
               value={servings}
               onChangeText={setServings}
-              keyboardType="numeric"
             />
           </View>
         </View>
@@ -666,7 +672,19 @@ export default function AddRecipeScreen() {
               maxLength={2000}
             />
             {step.image_url ? (
-              <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />
+              <View>
+                <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />
+                <View style={styles.stepImageActions}>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, image_url: undefined } : s))}>
+                    <Ionicons name="close-circle" size={16} color={Colors.danger} />
+                    <Text style={styles.removeImageText}>Remove</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.removeImageBtn} onPress={() => pickStepImage(i)}>
+                    <Ionicons name="swap-horizontal" size={16} color={Colors.primary} />
+                    <Text style={[styles.removeImageText, { color: Colors.primary }]}>Replace</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             ) : (
               <TouchableOpacity style={styles.stepImageBtn} onPress={() => pickStepImage(i)}>
                 <Ionicons name="image-outline" size={18} color={Colors.textSecondary} />
@@ -712,6 +730,8 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   heroPlaceholderText: { fontSize: 14, color: Colors.textSecondary },
+  removeImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
+  removeImageText: { fontSize: 13, color: Colors.danger },
   label: { fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 6, marginTop: 14 },
   sectionHeader: {
     fontSize: 18,
@@ -846,6 +866,7 @@ const styles = StyleSheet.create({
   },
   stepImageBtnText: { fontSize: 13, color: Colors.textSecondary },
   stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
+  stepImageActions: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 4 },
   saveButton: {
     backgroundColor: Colors.primary,
     borderRadius: 12,

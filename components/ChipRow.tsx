@@ -22,6 +22,9 @@ export default function ChipRow({ label, items, selected, onToggle }: Props) {
               key={value}
               style={[styles.chip, isActive && styles.chipActive]}
               onPress={() => onToggle(value)}
+              accessibilityRole="button"
+              accessibilityLabel={`${chipLabel} filter`}
+              accessibilityState={{ selected: isActive }}
               // @ts-ignore
               dataSet={{ hover: 'chip' }}
             >

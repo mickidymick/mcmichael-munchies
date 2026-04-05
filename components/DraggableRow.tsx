@@ -23,6 +23,10 @@ export default function DraggableRow({ index, dragType, onReorder, style, childr
     const el = ref.current as unknown as HTMLElement;
     if (!el || !el.addEventListener) return;
 
+    // Only enable drag on desktop — on mobile/touch devices it interferes with taps
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isTouchDevice) return;
+
     el.draggable = true;
     el.style.cursor = 'default';
 

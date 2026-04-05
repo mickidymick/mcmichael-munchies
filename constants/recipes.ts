@@ -4,8 +4,9 @@ import { RecipeFamily } from '../lib/supabase';
 export const CATEGORIES = [
   "Zach's Favorites", 'Breakfast', 'All things Sourdough', 'Pizza',
   'Beef', 'Chicken', 'Pork', 'Seafood',
-  'Soups, Stews & Chili', 'Vegetables', 'Pasta & Rice',
-  'Sauces, Dips & Dressings', 'Desserts', 'Quick & Easy', 'The Wok', 'Other',
+  'Soups, Stews & Chili', 'Vegetables', 'Salads', 'Pasta & Rice',
+  'Sauces, Dips & Dressings', 'Appetizers & Snacks', 'Breads & Baking',
+  'Casseroles', 'Desserts', 'Drinks & Cocktails', 'Quick & Easy', 'The Wok', 'Other',
 ];
 
 export const CATEGORY_ICONS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
@@ -19,18 +20,23 @@ export const CATEGORY_ICONS: { label: string; icon: keyof typeof Ionicons.glyphM
   { label: 'Seafood', icon: 'fish-outline' },
   { label: 'Soups, Stews & Chili', icon: 'water-outline' },
   { label: 'Vegetables', icon: 'nutrition-outline' },
+  { label: 'Salads', icon: 'leaf-outline' },
   { label: 'Pasta & Rice', icon: 'grid-outline' },
   { label: 'Sauces, Dips & Dressings', icon: 'color-filter-outline' },
+  { label: 'Appetizers & Snacks', icon: 'fast-food-outline' },
+  { label: 'Breads & Baking', icon: 'cafe-outline' },
+  { label: 'Casseroles', icon: 'layers-outline' },
   { label: 'Desserts', icon: 'ice-cream-outline' },
+  { label: 'Drinks & Cocktails', icon: 'beer-outline' },
   { label: 'Quick & Easy', icon: 'timer-outline' },
   { label: 'The Wok', icon: 'flame-outline' },
 ];
 
-export const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's"];
+export const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's", "Ross's"];
 
 export const CUISINES = [
-  'American', 'Italian', 'Mexican', 'Japanese', 'Chinese',
-  'Indian', 'Comfort Food', 'Other',
+  'American', 'Southern', 'Italian', 'Mexican', 'Greek', 'Mediterranean',
+  'French', 'Japanese', 'Chinese', 'Thai', 'Korean', 'Indian', 'Other',
 ];
 
 export const UNITS = [

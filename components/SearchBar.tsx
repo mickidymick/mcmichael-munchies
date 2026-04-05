@@ -174,9 +174,11 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           onBlur={() => { blurTimeout.current = setTimeout(() => setFocused(false), 200); }}
           onSubmitEditing={onSubmit}
           returnKeyType="search"
+          accessibilityLabel="Search recipes"
+          accessibilityRole="search"
         />
         {value.length > 0 && (
-          <TouchableOpacity onPress={() => onChangeText('')}>
+          <TouchableOpacity onPress={() => onChangeText('')} accessibilityLabel="Clear search" accessibilityRole="button">
             <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
           </TouchableOpacity>
         )}

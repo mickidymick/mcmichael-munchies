@@ -16,6 +16,7 @@ import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
+import { CATEGORIES, CUISINES } from '../constants/recipes';
 import { invalidateSearchCache } from '../components/SearchBar';
 
 type ImportedRecipe = {
@@ -35,7 +36,7 @@ type ImportedRecipe = {
 
 type RecipeStatus = 'pending' | 'saving' | 'saved' | 'failed';
 
-const CLAUDE_PROMPT = `I'm going to show you photos of recipes from a cookbook. For each recipe, extract the information into this exact JSON format. Return ONLY a JSON array, no other text.
+const AI_PROMPT = `I'm going to show you photos of recipes from a cookbook. For each recipe, extract the information into this exact JSON format. Return ONLY a JSON array, no other text.
 
 [
   {
@@ -62,15 +63,15 @@ const CLAUDE_PROMPT = `I'm going to show you photos of recipes from a cookbook. 
 
 Rules:
 - For "unit", use one of: tsp, tbsp, cup, oz, fl oz, pt, qt, gal, ml, l, lb, g, kg, pinch, dash, piece, slice, clove, can, bag, bunch, sprig, whole, or "" (empty string if no unit)
-- For "categories", use an ARRAY of one or more of: Zach's Favorites, Breakfast, All things Sourdough, Pizza, Beef, Chicken, Pork, Seafood, Soups, Stews & Chili, Vegetables, Pasta & Rice, Sauces, Dips & Dressings, Desserts, Quick & Easy, The Wok, Other. A recipe can belong to multiple categories.
+- For "categories", use an ARRAY of one or more of: ${CATEGORIES.join(', ')}. A recipe can belong to multiple categories.
 - For "notes", include the source (e.g. "From Grandma's cookbook, p.42") or leave as empty string
-- For "cuisine", use one of: American, Italian, Mexican, Japanese, Chinese, Indian, Comfort Food, Other
+- For "cuisine", use one of: ${CUISINES.join(', ')}
 - For "family", use null (I'll set this later)
 - Times are in minutes, use null if not specified
 - Keep ingredient amounts as strings (e.g. "1/2", "2-3")
 - If you can't read something clearly, make your best guess and add "[?]" to flag it`;
 
-export default function BulkImportScreen() {
+export default function AutoImportScreen() {
   const router = useRouter();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [jsonInput, setJsonInput] = useState('');
@@ -189,9 +190,12 @@ export default function BulkImportScreen() {
 
     // Add saved recipes to review queue
     if (newSavedIds.length > 0) {
-      await supabase.from('review_queue').insert(
+      const { error: queueError } = await supabase.from('review_queue').insert(
         newSavedIds.map((recipe_id) => ({ user_id: user.id, recipe_id }))
       );
+      if (queueError) {
+        Alert.alert('Warning', 'Recipes were saved but could not be added to the review queue. You can find them in Browse.');
+      }
     }
 
     setSavedIds(newSavedIds);
@@ -207,7 +211,7 @@ export default function BulkImportScreen() {
 
   async function copyPrompt() {
     if (Platform.OS === 'web') {
-      await navigator.clipboard.writeText(CLAUDE_PROMPT);
+      await navigator.clipboard.writeText(AI_PROMPT);
     }
     setPromptCopied(true);
     setTimeout(() => setPromptCopied(false), 2000);
@@ -329,10 +333,10 @@ export default function BulkImportScreen() {
         </View>
         <Text style={styles.instructionText}>
           1. Copy the prompt below using the Copy button{'\n'}
-          2. Go to claude.ai and start a new chat{'\n'}
+          2. Open any AI chatbot (ChatGPT, Claude, Gemini, etc.) and start a new chat{'\n'}
           3. Paste the prompt and attach photos of your cookbook pages{'\n'}
-          4. Claude will read the recipes and give you formatted text{'\n'}
-          5. Copy all of Claude's response{'\n'}
+          4. The AI will read the recipes and give you formatted text{'\n'}
+          5. Copy the entire response{'\n'}
           6. Come back here, paste it in the box below, and hit Import
         </Text>
       </View>
@@ -340,7 +344,7 @@ export default function BulkImportScreen() {
       {/* Copyable prompt */}
       <View style={styles.promptSection}>
         <View style={styles.promptHeader}>
-          <Text style={styles.promptLabel}>Prompt for Claude</Text>
+          <Text style={styles.promptLabel}>Prompt for AI</Text>
           <TouchableOpacity style={styles.copyBtn} onPress={copyPrompt}>
             <Ionicons
               name={promptCopied ? 'checkmark' : 'copy-outline'}
@@ -353,15 +357,15 @@ export default function BulkImportScreen() {
           </TouchableOpacity>
         </View>
         <ScrollView style={styles.promptBox} nestedScrollEnabled>
-          <Text style={styles.promptText} selectable>{CLAUDE_PROMPT}</Text>
+          <Text style={styles.promptText} selectable>{AI_PROMPT}</Text>
         </ScrollView>
       </View>
 
       {/* JSON input */}
-      <Text style={styles.pasteLabel}>Paste Claude's response here</Text>
+      <Text style={styles.pasteLabel}>Paste the AI response here</Text>
       <TextInput
         style={styles.jsonInput}
-        placeholder='Paste everything Claude gave you here...'
+        placeholder='Paste the full response from the AI here...'
         placeholderTextColor={Colors.textSecondary}
         value={jsonInput}
         onChangeText={(v) => {

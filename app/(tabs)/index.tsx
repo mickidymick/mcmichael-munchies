@@ -12,14 +12,16 @@ import {
 } from 'react-native';
 
 const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 import SearchBar from '../../components/SearchBar';
 import { useUserRole } from '../../lib/useUserRole';
+import { useFavorites } from '../../lib/useFavorites';
 import FamilyBadge from '../../components/FamilyBadge';
+import LazyImage from '../../components/LazyImage';
 import { FAMILIES, CATEGORY_ICONS } from '../../constants/recipes';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +29,7 @@ const { width } = Dimensions.get('window');
 export default function HomeScreen() {
   const router = useRouter();
   const { isMemberOrAdmin } = useUserRole();
+  const { isFavorite } = useFavorites();
   const [carouselRecipes, setCarouselRecipes] = useState<Recipe[]>([]);
   const [recentRecipes, setRecentRecipes] = useState<Recipe[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -47,21 +50,29 @@ export default function HomeScreen() {
     loadRecipes();
   }, []);
 
+  // Refresh on focus to pick up new/edited recipes
+  useFocusEffect(
+    useCallback(() => {
+      loadRecipes();
+    }, [])
+  );
+
   async function loadRecipes() {
     setLoading(true);
     setLoadError(false);
     try {
+      const listColumns = 'id,title,image_url,family,categories,cuisine,prep_time,cook_time,description,estimated_calories';
       const [countRes, recentRes, carouselRes] = await Promise.all([
-        supabase.from('recipes').select('*', { count: 'exact', head: true }),
-        supabase.from('recipes').select('*').order('created_at', { ascending: false }).limit(6),
-        supabase.from('recipes').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('recipes').select('id', { count: 'exact', head: true }),
+        supabase.from('recipes').select(listColumns).order('created_at', { ascending: false }).limit(6),
+        supabase.from('recipes').select(listColumns).order('created_at', { ascending: false }).limit(10),
       ]);
       if (countRes.error && recentRes.error && carouselRes.error) {
         setLoadError(true);
       } else {
         if (countRes.count !== null) setTotalCount(countRes.count);
-        if (recentRes.data) setRecentRecipes(recentRes.data);
-        if (carouselRes.data) setCarouselRecipes(carouselRes.data);
+        if (recentRes.data) setRecentRecipes(recentRes.data as Recipe[]);
+        if (carouselRes.data) setCarouselRecipes(carouselRes.data as Recipe[]);
       }
     } catch {
       setLoadError(true);
@@ -76,7 +87,7 @@ export default function HomeScreen() {
     const oneSetWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
     const interval = setInterval(() => {
       if (hoveringRef.current) return;
-      scrollPos.current += 1;
+      scrollPos.current += 0.5;
       // Wrap around using modulo so it works regardless of where user swiped to
       if (scrollPos.current >= oneSetWidth) {
         scrollPos.current = scrollPos.current - oneSetWidth;
@@ -84,21 +95,24 @@ export default function HomeScreen() {
       } else {
         scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
       }
-    }, 30);
+    }, 50);
     return () => clearInterval(interval);
   }, [autoScroll, carouselRecipes.length, CARD_WIDTH]);
 
-  const carouselData = carouselRecipes.length >= 2
-    ? [...carouselRecipes, ...carouselRecipes]
-    : carouselRecipes;
+  const carouselData = useMemo(() =>
+    carouselRecipes.length >= 2
+      ? [...carouselRecipes, ...carouselRecipes]
+      : carouselRecipes,
+    [carouselRecipes]
+  );
 
-  const cardHoverProps = (index: number) =>
+  const cardHoverProps = useCallback((index: number) =>
     Platform.OS === 'web'
       ? {
           onMouseEnter: () => { hoveringRef.current = true; setHoveredCard(index); },
           onMouseLeave: () => { hoveringRef.current = false; setHoveredCard(null); },
         }
-      : {};
+      : {}, []);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -197,7 +211,7 @@ export default function HomeScreen() {
               {...cardHoverProps(index)}
             >
                 {item.image_url ? (
-                  <Image source={{ uri: item.image_url }} style={styles.carouselCardImage} resizeMode="cover" accessibilityLabel={`Photo of ${item.title}`} />
+                  <LazyImage source={{ uri: item.image_url }} style={styles.carouselCardImage} resizeMode="cover" accessibilityLabel={`Photo of ${item.title}`} />
                 ) : (
                   <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
                     <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
@@ -206,6 +220,11 @@ export default function HomeScreen() {
                 {item.family && (
                   <View style={styles.carouselBadge}>
                     <FamilyBadge family={item.family} size={26} />
+                  </View>
+                )}
+                {isFavorite(item.id) && (
+                  <View style={styles.carouselHeart}>
+                    <Ionicons name="heart" size={16} color={Colors.primary} />
                   </View>
                 )}
                 <View style={[styles.carouselCardOverlay, hoveredCard === index && styles.carouselCardOverlayExpanded]}>
@@ -250,7 +269,7 @@ export default function HomeScreen() {
         <View style={styles.contentWrap}>
           <Text style={styles.introTitle}>McMichael Munchies</Text>
           <Text style={styles.introText}>
-            Your go-to place for family recipes, personal favorites, and tasty treats — all organized and easy to find. I wanted to create this to be a place where we can save and have easy access to all the amazing food we grew up with, as well as share new and amazing things we have found and created over the years. It contains recipes from the McMichaels, Knepps, and Elmores.
+            Your go-to place for family recipes, personal favorites, and tasty treats — all organized and easy to find. I wanted to create this to be a place where we can save and have easy access to all the amazing food we grew up with, as well as share new and amazing things we have found and created over the years. It contains recipes from the McMichaels, Knepps, Elmores, and Rosses.
           </Text>
           {totalCount > 0 && (
             <View style={styles.statsRow}>
@@ -260,7 +279,7 @@ export default function HomeScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>3</Text>
+                <Text style={styles.statNumber}>{FAMILIES.length}</Text>
                 <Text style={styles.statLabel}>Families</Text>
               </View>
               <View style={styles.statDivider} />
@@ -330,13 +349,20 @@ export default function HomeScreen() {
                   // @ts-ignore
                   dataSet={{ hover: 'card' }}
                 >
-                  {recipe.image_url ? (
-                    <Image source={{ uri: recipe.image_url }} style={styles.recipeCardImage} accessibilityLabel={`Photo of ${recipe.title}`} />
-                  ) : (
-                    <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
-                      <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
-                    </View>
-                  )}
+                  <View>
+                    {recipe.image_url ? (
+                      <LazyImage source={{ uri: recipe.image_url }} style={styles.recipeCardImage} accessibilityLabel={`Photo of ${recipe.title}`} />
+                    ) : (
+                      <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
+                        <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
+                      </View>
+                    )}
+                    {isFavorite(recipe.id) && (
+                      <View style={styles.gridHeart}>
+                        <Ionicons name="heart" size={14} color={Colors.primary} />
+                      </View>
+                    )}
+                  </View>
                   <View style={styles.recipeCardInfo}>
                     <View style={styles.recipeCardTitleRow}>
                       <FamilyBadge family={recipe.family} size={22} />
@@ -448,6 +474,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   carouselBadge: { position: 'absolute', top: 8, right: 8, zIndex: 2 },
+  carouselHeart: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+  },
   carouselCardOverlayExpanded: {
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -581,6 +619,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   recipeCardImage: { width: '100%', height: 120 },
+  gridHeart: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   recipeCardPlaceholder: {
     backgroundColor: Colors.secondary,
     alignItems: 'center',

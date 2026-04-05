@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-npx expo start --web
+npx expo start --web --clear

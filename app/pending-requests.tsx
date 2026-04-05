@@ -71,20 +71,34 @@ export default function PendingRequestsScreen() {
 
   async function handleRequest(requestId: string, userId: string, approve: boolean) {
     setProcessing(requestId);
+    const newStatus = approve ? 'approved' : 'denied';
 
-    await supabase
+    // Update all pending requests for this user (handles duplicates)
+    const { error: updateError } = await supabase
       .from('access_requests')
-      .update({ status: approve ? 'approved' : 'denied' })
-      .eq('id', requestId);
+      .update({ status: newStatus })
+      .eq('user_id', userId)
+      .eq('status', 'pending');
+
+    if (updateError) {
+      alert(`Failed to ${approve ? 'approve' : 'deny'} request: ${updateError.message}`);
+      setProcessing(null);
+      return;
+    }
 
     if (approve) {
-      await supabase
+      const { error: roleError } = await supabase
         .from('profiles')
         .update({ role: 'member' })
         .eq('id', userId);
+
+      if (roleError) {
+        alert(`Request approved but failed to update role: ${roleError.message}`);
+      }
     }
 
-    setRequests((prev) => prev.filter((r) => r.id !== requestId));
+    // Remove all requests for this user from local state
+    setRequests((prev) => prev.filter((r) => r.user_id !== userId));
     setProcessing(null);
   }
 

@@ -10,7 +10,8 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
@@ -38,6 +39,13 @@ export default function RecipeDetailScreen() {
     checkFavorite();
   }, [id]);
 
+  // Refresh recipe data when screen regains focus (e.g. after editing)
+  useFocusEffect(
+    useCallback(() => {
+      if (!loading) loadRecipe();
+    }, [id])
+  );
+
   async function loadRecipe() {
     setError(false);
     const { data, error: err } = await supabase.from('recipes').select('*').eq('id', id).single();
@@ -63,7 +71,8 @@ export default function RecipeDetailScreen() {
     const { error } = await supabase.from('recipes').delete().eq('id', id);
     setDeleting(false);
     if (error) { Alert.alert('Error', error.message); setShowDeleteConfirm(false); return; }
-    router.replace('/(tabs)');
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)');
   }
 
   async function toggleFavorite() {
@@ -234,9 +243,12 @@ export default function RecipeDetailScreen() {
                 <Ionicons name="nutrition-outline" size={18} color={Colors.primary} />
                 <Text style={styles.infoLabel}>Calories</Text>
                 <Text style={styles.infoValue}>{recipe.estimated_calories}</Text>
-                {recipe.servings != null && recipe.servings > 0 && (
-                  <Text style={styles.infoSub}>{Math.round(recipe.estimated_calories / recipe.servings)}/serving</Text>
-                )}
+                {recipe.servings != null && (() => {
+                  const lower = parseInt(String(recipe.servings), 10);
+                  return lower > 0 ? (
+                    <Text style={styles.infoSub}>{Math.round(recipe.estimated_calories / lower)}/serving</Text>
+                  ) : null;
+                })()}
               </View>
             )}
           </View>
