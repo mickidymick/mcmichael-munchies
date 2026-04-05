@@ -14,6 +14,7 @@ import {
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import DraggableRow from '../../components/DraggableRow';
+import ImageCropModal from '../../components/ImageCropModal';
 import { invalidateSearchCache } from '../../components/SearchBar';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -240,14 +241,20 @@ export default function EditRecipeScreen() {
 
   // ─── Images ──────────────────────────────────────────────────────────────────
 
+  const [pendingCrop, setPendingCrop] = useState<{ uri: string; target: 'hero' | number } | null>(null);
+
   async function pickHeroImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [16, 9],
       quality: 0.8,
     });
-    if (!result.canceled) setHeroImage(result.assets[0].uri);
+    if (!result.canceled) {
+      if (Platform.OS === 'web') {
+        setPendingCrop({ uri: result.assets[0].uri, target: 'hero' });
+      } else {
+        setHeroImage(result.assets[0].uri);
+      }
+    }
   }
 
   const [uploadingStepIndex, setUploadingStepIndex] = useState<number | null>(null);
@@ -255,14 +262,33 @@ export default function EditRecipeScreen() {
   async function pickStepImage(index: number) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
       quality: 0.7,
     });
     if (!result.canceled) {
-      setUploadingStepIndex(index);
-      const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+      if (Platform.OS === 'web') {
+        setPendingCrop({ uri: result.assets[0].uri, target: index });
+      } else {
+        setUploadingStepIndex(index);
+        const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+        setUploadingStepIndex(null);
+        if (url) setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+      }
+    }
+  }
+
+  async function handleCropComplete(croppedUri: string) {
+    if (!pendingCrop) return;
+    const { target } = pendingCrop;
+    setPendingCrop(null);
+    if (target === 'hero') {
+      setHeroImage(croppedUri);
+    } else {
+      setUploadingStepIndex(target);
+      const url = await uploadImage(croppedUri, `step-${Date.now()}`);
       setUploadingStepIndex(null);
-      if (url) setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+      if (url) {
+        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: url } : s));
+      }
     }
   }
 
@@ -647,6 +673,14 @@ export default function EditRecipeScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      {pendingCrop && (
+        <ImageCropModal
+          imageUri={pendingCrop.uri}
+          aspect={[16, 9]}
+          onCrop={handleCropComplete}
+          onCancel={() => setPendingCrop(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -655,7 +689,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 20, paddingBottom: 60 },
   heroPickerButton: { marginBottom: 20, borderRadius: 12, overflow: 'hidden', maxWidth: 600, width: '100%', alignSelf: 'center' },
-  heroPreview: { width: '100%', height: 200 },
+  heroPreview: { width: '100%', aspectRatio: 16 / 9 },
   heroPlaceholder: { height: 180, backgroundColor: Colors.border, borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed' },
   heroPlaceholderText: { fontSize: 14, color: Colors.textSecondary },
   removeImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
@@ -707,7 +741,7 @@ const styles = StyleSheet.create({
   stepBadgeText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
   stepImageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
   stepImageBtnText: { fontSize: 13, color: Colors.textSecondary },
-  stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
+  stepImagePreview: { width: '100%', maxWidth: 600, aspectRatio: 16 / 9, borderRadius: 8, alignSelf: 'center' },
   stepImageActions: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 4 },
   saveButton: { backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 32 },
   saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },

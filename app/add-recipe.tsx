@@ -21,6 +21,7 @@ import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
+import ImageCropModal from '../components/ImageCropModal';
 import { invalidateSearchCache } from '../components/SearchBar';
 import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../constants/recipes';
 
@@ -209,14 +210,20 @@ export default function AddRecipeScreen() {
 
   // ─── Image helpers ───────────────────────────────────────────────────────────
 
+  const [pendingCrop, setPendingCrop] = useState<{ uri: string; target: 'hero' | number } | null>(null);
+
   async function pickHeroImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [16, 9],
       quality: 0.8,
     });
-    if (!result.canceled) setHeroImage(result.assets[0].uri);
+    if (!result.canceled) {
+      if (Platform.OS === 'web') {
+        setPendingCrop({ uri: result.assets[0].uri, target: 'hero' });
+      } else {
+        setHeroImage(result.assets[0].uri);
+      }
+    }
   }
 
   const [uploadingStepIndex, setUploadingStepIndex] = useState<number | null>(null);
@@ -224,15 +231,34 @@ export default function AddRecipeScreen() {
   async function pickStepImage(index: number) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
       quality: 0.7,
     });
     if (!result.canceled) {
-      setUploadingStepIndex(index);
-      const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+      if (Platform.OS === 'web') {
+        setPendingCrop({ uri: result.assets[0].uri, target: index });
+      } else {
+        setUploadingStepIndex(index);
+        const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+        setUploadingStepIndex(null);
+        if (url) {
+          setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+        }
+      }
+    }
+  }
+
+  async function handleCropComplete(croppedUri: string) {
+    if (!pendingCrop) return;
+    const { target } = pendingCrop;
+    setPendingCrop(null);
+    if (target === 'hero') {
+      setHeroImage(croppedUri);
+    } else {
+      setUploadingStepIndex(target);
+      const url = await uploadImage(croppedUri, `step-${Date.now()}`);
       setUploadingStepIndex(null);
       if (url) {
-        setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: url } : s));
       }
     }
   }
@@ -723,6 +749,14 @@ export default function AddRecipeScreen() {
         </TouchableOpacity>
 
       </ScrollView>
+      {pendingCrop && (
+        <ImageCropModal
+          imageUri={pendingCrop.uri}
+          aspect={[16, 9]}
+          onCrop={handleCropComplete}
+          onCancel={() => setPendingCrop(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -879,7 +913,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   stepImageBtnText: { fontSize: 13, color: Colors.textSecondary },
-  stepImagePreview: { width: '100%', maxWidth: 600, height: 160, borderRadius: 8, alignSelf: 'center' },
+  stepImagePreview: { width: '100%', maxWidth: 600, aspectRatio: 16 / 9, borderRadius: 8, alignSelf: 'center' },
   stepImageActions: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 4 },
   saveButton: {
     backgroundColor: Colors.primary,

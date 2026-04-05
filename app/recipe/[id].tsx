@@ -42,7 +42,7 @@ export default function RecipeDetailScreen() {
   // Refresh recipe data when screen regains focus (e.g. after editing)
   useFocusEffect(
     useCallback(() => {
-      if (!loading) loadRecipe();
+      loadRecipe();
     }, [id])
   );
 
@@ -366,7 +366,7 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroImage: { width: '100%', maxWidth: 600, height: 260, alignSelf: 'center', borderRadius: 12 },
+  heroImage: { width: '100%', maxWidth: 600, aspectRatio: 16 / 9, alignSelf: 'center', borderRadius: 12 },
   heroPlaceholder: { backgroundColor: Colors.border },
   body: { padding: 20 },
   titleRow: {
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
   stepImage: {
     width: '100%',
     maxWidth: 600,
-    height: 200,
+    aspectRatio: 16 / 9,
     borderRadius: 10,
     marginTop: 10,
     alignSelf: 'center',

@@ -29,7 +29,7 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
       // @ts-ignore - RN Web dataSet
       dataSet={{ hover: 'card' }}
     >
-      <View>
+      <View style={styles.imageWrap}>
         {recipe.image_url ? (
           <LazyImage
             source={{ uri: recipe.image_url }}
@@ -78,8 +78,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
+    maxWidth: 560,
+    alignSelf: 'center',
+    width: '100%',
   },
-  cardImage: { width: 90, height: 90 } as any,
+  imageWrap: { width: 120, backgroundColor: Colors.secondary, alignSelf: 'stretch', justifyContent: 'center', borderTopRightRadius: 10, borderBottomRightRadius: 10 },
+  cardImage: { width: 120, aspectRatio: 16 / 9 } as any,
   heartBadge: {
     position: 'absolute' as const,
     bottom: 4,
