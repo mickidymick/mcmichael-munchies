@@ -359,20 +359,30 @@ export async function estimateCalories(ingredients: Ingredient[]): Promise<numbe
   const validIngs = ingredients.filter((ing) => ing.item.trim());
   if (validIngs.length === 0) return null;
 
-  const lookups = validIngs.map((ing) => () => lookupFood(ing.item));
-  const results = await parallelLimit(lookups, 3);
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 15000)
+    );
+    const work = async () => {
+      const lookups = validIngs.map((ing) => () => lookupFood(ing.item));
+      const results = await parallelLimit(lookups, 3);
 
-  let totalCalories = 0;
-  let matchedAny = false;
+      let totalCalories = 0;
+      let matchedAny = false;
 
-  for (let i = 0; i < validIngs.length; i++) {
-    const { calPer100g, portions } = results[i];
-    if (calPer100g == null) continue;
-    matchedAny = true;
-    const grams = estimateGrams(validIngs[i].amount, validIngs[i].unit, validIngs[i].item, portions);
-    totalCalories += (calPer100g / 100) * grams;
+      for (let i = 0; i < validIngs.length; i++) {
+        const { calPer100g, portions } = results[i];
+        if (calPer100g == null) continue;
+        matchedAny = true;
+        const grams = estimateGrams(validIngs[i].amount, validIngs[i].unit, validIngs[i].item, portions);
+        totalCalories += (calPer100g / 100) * grams;
+      }
+
+      if (!matchedAny) return null;
+      return Math.round(totalCalories);
+    };
+    return await Promise.race([work(), timeout]);
+  } catch {
+    return null;
   }
-
-  if (!matchedAny) return null;
-  return Math.round(totalCalories);
 }

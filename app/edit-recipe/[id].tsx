@@ -250,6 +250,8 @@ export default function EditRecipeScreen() {
     if (!result.canceled) setHeroImage(result.assets[0].uri);
   }
 
+  const [uploadingStepIndex, setUploadingStepIndex] = useState<number | null>(null);
+
   async function pickStepImage(index: number) {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -257,7 +259,9 @@ export default function EditRecipeScreen() {
       quality: 0.7,
     });
     if (!result.canceled) {
+      setUploadingStepIndex(index);
       const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+      setUploadingStepIndex(null);
       if (url) setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
     }
   }
@@ -266,28 +270,33 @@ export default function EditRecipeScreen() {
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
   async function uploadImage(uri: string, name: string): Promise<string | null> {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const mimeType = blob.type || 'image/jpeg';
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const mimeType = blob.type || 'image/jpeg';
 
-    if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
-      Alert.alert('Invalid file type', 'Please upload a JPEG, PNG, or WebP image.');
+      if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+        Alert.alert('Invalid file type', 'Please upload a JPEG, PNG, or WebP image.');
+        return null;
+      }
+      if (blob.size > MAX_IMAGE_SIZE) {
+        Alert.alert('File too large', 'Images must be under 5MB.');
+        return null;
+      }
+
+      const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+      const unique = `${name}-${crypto.randomUUID()}`;
+      const path = `${unique}.${fileExt}`;
+      const { error } = await supabase.storage
+        .from('recipe-images')
+        .upload(path, blob, { contentType: mimeType });
+      if (error) { Alert.alert('Image upload failed', error.message); return null; }
+      const { data } = supabase.storage.from('recipe-images').getPublicUrl(path);
+      return data.publicUrl;
+    } catch (e: any) {
+      Alert.alert('Image upload failed', e?.message ?? 'Could not process the selected image.');
       return null;
     }
-    if (blob.size > MAX_IMAGE_SIZE) {
-      Alert.alert('File too large', 'Images must be under 5MB.');
-      return null;
-    }
-
-    const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
-    const unique = `${name}-${crypto.randomUUID()}`;
-    const path = `${unique}.${fileExt}`;
-    const { error } = await supabase.storage
-      .from('recipe-images')
-      .upload(path, blob, { contentType: mimeType });
-    if (error) { Alert.alert('Image upload failed', error.message); return null; }
-    const { data } = supabase.storage.from('recipe-images').getPublicUrl(path);
-    return data.publicUrl;
   }
 
   // ─── Save ────────────────────────────────────────────────────────────────────
@@ -613,6 +622,11 @@ export default function EditRecipeScreen() {
                     <Text style={[styles.removeImageText, { color: Colors.primary }]}>Replace</Text>
                   </TouchableOpacity>
                 </View>
+              </View>
+            ) : uploadingStepIndex === i ? (
+              <View style={styles.stepImageBtn}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.stepImageBtnText}>Uploading photo...</Text>
               </View>
             ) : (
               <TouchableOpacity style={styles.stepImageBtn} onPress={() => pickStepImage(i)}>
