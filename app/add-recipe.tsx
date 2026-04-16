@@ -22,6 +22,8 @@ import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
 import ImageCropModal from '../components/ImageCropModal';
+import StockPhotoPicker from '../components/StockPhotoPicker';
+import AIImageGenerator from '../components/AIImageGenerator';
 import { invalidateSearchCache } from '../components/SearchBar';
 import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../constants/recipes';
 
@@ -43,6 +45,10 @@ export default function AddRecipeScreen() {
   const [cookTime, setCookTime] = useState('');
   const [servings, setServings] = useState('');
   const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [isStockImage, setIsStockImage] = useState(false);
+  const [isAiGenerated, setIsAiGenerated] = useState(false);
+  const [showStockPicker, setShowStockPicker] = useState(false);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
   const [unitDropdownIndex, setUnitDropdownIndex] = useState<number | null>(null);
 
@@ -210,7 +216,7 @@ export default function AddRecipeScreen() {
 
   // ─── Image helpers ───────────────────────────────────────────────────────────
 
-  const [pendingCrop, setPendingCrop] = useState<{ uri: string; target: 'hero' | number } | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<{ uri: string; target: 'hero' | number; placeholderType?: 'stock' | 'ai' } | null>(null);
 
   async function pickHeroImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -222,7 +228,37 @@ export default function AddRecipeScreen() {
         setPendingCrop({ uri: result.assets[0].uri, target: 'hero' });
       } else {
         setHeroImage(result.assets[0].uri);
+        setIsStockImage(false);
+        setIsAiGenerated(false);
       }
+    }
+  }
+
+  function handleStockPhotoSelect(url: string) {
+    setShowStockPicker(false);
+    setHeroImage(url);
+    setIsStockImage(true);
+    setIsAiGenerated(false);
+  }
+
+  async function handleAIImageSelect(url: string) {
+    setShowAIGenerator(false);
+    if (Platform.OS === 'web') {
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        if (!res.ok) throw new Error('fetch failed');
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setPendingCrop({ uri: blobUrl, target: 'hero', placeholderType: 'ai' });
+      } catch {
+        setHeroImage(url);
+        setIsStockImage(false);
+        setIsAiGenerated(true);
+      }
+    } else {
+      setHeroImage(url);
+      setIsStockImage(false);
+      setIsAiGenerated(true);
     }
   }
 
@@ -249,10 +285,12 @@ export default function AddRecipeScreen() {
 
   async function handleCropComplete(croppedUri: string) {
     if (!pendingCrop) return;
-    const { target } = pendingCrop;
+    const { target, placeholderType } = pendingCrop;
     setPendingCrop(null);
     if (target === 'hero') {
       setHeroImage(croppedUri);
+      setIsStockImage(placeholderType === 'stock');
+      setIsAiGenerated(placeholderType === 'ai');
     } else {
       setUploadingStepIndex(target);
       const url = await uploadImage(croppedUri, `step-${Date.now()}`);
@@ -324,7 +362,9 @@ export default function AddRecipeScreen() {
 
     let imageUrl: string | null = null;
     if (heroImage) {
-      imageUrl = await uploadImage(heroImage, `hero-${Date.now()}`);
+      imageUrl = (heroImage.startsWith('blob:') || heroImage.startsWith('file://'))
+        ? await uploadImage(heroImage, `hero-${Date.now()}`)
+        : heroImage;
     }
 
     const tags = tagsInput
@@ -352,6 +392,8 @@ export default function AddRecipeScreen() {
       cuisine,
       tags,
       image_url: imageUrl,
+      is_stock_image: isStockImage && !!imageUrl,
+      is_ai_generated: isAiGenerated && !!imageUrl,
       ingredients: cleanIngredients,
       steps: cleanSteps,
       created_by: user.id,
@@ -410,12 +452,22 @@ export default function AddRecipeScreen() {
             </View>
           )}
         </TouchableOpacity>
-        {heroImage && (
-          <TouchableOpacity style={styles.removeImageBtn} onPress={() => setHeroImage(null)}>
-            <Ionicons name="close-circle" size={16} color={Colors.danger} />
-            <Text style={styles.removeImageText}>Remove photo</Text>
+        <View style={styles.heroActionsRow}>
+          <TouchableOpacity style={styles.stockPhotoBtn} onPress={() => setShowStockPicker(true)}>
+            <Ionicons name="search" size={14} color={Colors.primary} />
+            <Text style={styles.stockPhotoBtnText}>Find stock photo</Text>
           </TouchableOpacity>
-        )}
+          <TouchableOpacity style={styles.stockPhotoBtn} onPress={() => setShowAIGenerator(true)}>
+            <Ionicons name="sparkles" size={14} color={Colors.primary} />
+            <Text style={styles.stockPhotoBtnText}>Generate with AI</Text>
+          </TouchableOpacity>
+          {heroImage && (
+            <TouchableOpacity style={styles.removeImageBtn} onPress={() => { setHeroImage(null); setIsStockImage(false); setIsAiGenerated(false); }}>
+              <Ionicons name="close-circle" size={16} color={Colors.danger} />
+              <Text style={styles.removeImageText}>Remove photo</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Title */}
         <Text style={styles.label}>Title *</Text>
@@ -738,7 +790,8 @@ export default function AddRecipeScreen() {
           <Text style={styles.addRowText}>Add step</Text>
         </TouchableOpacity>
 
-        {/* Save button */}
+      </ScrollView>
+      <View style={styles.saveBar}>
         {/* @ts-ignore */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} dataSet={{ hover: 'btn' }}>
           {saving ? (
@@ -747,8 +800,7 @@ export default function AddRecipeScreen() {
             <Text style={styles.saveButtonText}>Save Recipe</Text>
           )}
         </TouchableOpacity>
-
-      </ScrollView>
+      </View>
       {pendingCrop && (
         <ImageCropModal
           imageUri={pendingCrop.uri}
@@ -757,14 +809,38 @@ export default function AddRecipeScreen() {
           onCancel={() => setPendingCrop(null)}
         />
       )}
+      {showStockPicker && (
+        <StockPhotoPicker
+          initialQuery={title}
+          onSelect={handleStockPhotoSelect}
+          onCancel={() => setShowStockPicker(false)}
+        />
+      )}
+      {showAIGenerator && (
+        <AIImageGenerator
+          initialPrompt={[title, description].map((s) => s.trim()).filter(Boolean).join(', ')}
+          onSelect={handleAIImageSelect}
+          onCancel={() => setShowAIGenerator(false)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 60 },
-  heroPickerButton: { marginBottom: 20, borderRadius: 12, overflow: 'hidden', maxWidth: 600, width: '100%', alignSelf: 'center' },
+  content: { padding: 20, paddingBottom: 100 },
+  saveBar: {
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  heroPickerButton: { borderRadius: 12, overflow: 'hidden', maxWidth: 600, width: '100%', alignSelf: 'center' },
+  heroActionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 8, marginBottom: 20, flexWrap: 'wrap' },
+  stockPhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 6 },
+  stockPhotoBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   heroPreview: { width: '100%', height: 200 },
   heroPlaceholder: {
     height: 180,
@@ -920,7 +996,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 32,
   },
   saveButtonText: { color: '#FFF', fontWeight: '700', fontSize: 17 },
   suggestionsBox: {

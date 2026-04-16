@@ -16,6 +16,8 @@ export type Recipe = {
   description: string;
   notes: string | null;
   image_url: string | null;
+  is_stock_image?: boolean;
+  is_ai_generated?: boolean;
   categories: string[];
   cuisine: string;
   family: RecipeFamily | null;

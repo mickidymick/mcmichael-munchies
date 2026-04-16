@@ -12,7 +12,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 import FamilyBadge from '../../components/FamilyBadge';
@@ -158,7 +158,20 @@ export default function RecipeDetailScreen() {
     >
       {/* Hero Image */}
       {recipe.image_url ? (
-        <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
+        <View style={styles.heroWrap}>
+          <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
+          {recipe.is_ai_generated ? (
+            <View style={styles.stockBadge} accessibilityLabel="AI generated — replace with your own">
+              <Ionicons name="sparkles" size={14} color={Colors.textSecondary} />
+              <Text style={styles.stockBadgeText}>AI generated</Text>
+            </View>
+          ) : recipe.is_stock_image ? (
+            <View style={styles.stockBadge} accessibilityLabel="Stock photo — replace with your own">
+              <MaterialCommunityIcons name="camera-off" size={14} color={Colors.textSecondary} />
+              <Text style={styles.stockBadgeText}>Stock photo</Text>
+            </View>
+          ) : null}
+        </View>
       ) : (
         <View style={[styles.heroImage, styles.heroPlaceholder]} />
       )}
@@ -366,8 +379,22 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  heroWrap: { width: '100%', maxWidth: 600, alignSelf: 'center', position: 'relative' },
   heroImage: { width: '100%', maxWidth: 600, aspectRatio: 16 / 9, alignSelf: 'center', borderRadius: 12 },
   heroPlaceholder: { backgroundColor: Colors.border },
+  stockBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  stockBadgeText: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
   body: { padding: 20 },
   titleRow: {
     flexDirection: 'row',

@@ -1,8 +1,20 @@
-import { Ingredient } from './supabase';
+import { Ingredient, supabase } from './supabase';
 
-const API_KEY = process.env.EXPO_PUBLIC_USDA_API_KEY ?? '';
-const BASE_URL = 'https://api.nal.usda.gov/fdc/v1/foods/search';
-const DETAIL_URL = 'https://api.nal.usda.gov/fdc/v1/food';
+async function callUsdaProxy(body: object): Promise<any> {
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(`${supabaseUrl}/functions/v1/usda-proxy`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token ?? supabaseKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
 
 // Approximate gram conversions for common cooking units (used as fallback)
 const GRAMS_PER_UNIT: Record<string, number> = {
@@ -239,10 +251,8 @@ const EMPTY_RESULT: FoodResult = { calPer100g: null, portions: [] };
 
 async function fetchPortions(fdcId: number): Promise<Portion[]> {
   try {
-    const url = `${DETAIL_URL}/${fdcId}?api_key=${API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    const data = await res.json();
+    const data = await callUsdaProxy({ endpoint: 'detail', fdcId });
+    if (!data) return [];
     return (data.foodPortions ?? [])
       .filter((p: any) => p.gramWeight > 0)
       .map((p: any) => ({
@@ -278,16 +288,13 @@ const SEARCH_HINTS: Record<string, string> = {
 };
 
 async function searchUSDA(query: string, dataType: string): Promise<any[]> {
-  const url = `${BASE_URL}?query=${encodeURIComponent(query)}&pageSize=5&dataType=${encodeURIComponent(dataType)}&api_key=${API_KEY}`;
-  const res = await fetch(url);
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.foods ?? [];
+  const data = await callUsdaProxy({ endpoint: 'search', query, pageSize: 5, dataType });
+  return data?.foods ?? [];
 }
 
 async function lookupFood(ingredientName: string): Promise<FoodResult> {
   const cleaned = cleanIngredientName(ingredientName);
-  if (!API_KEY || !cleaned) return EMPTY_RESULT;
+  if (!cleaned) return EMPTY_RESULT;
 
   try {
     // Use search hints for common ingredients that don't search well
@@ -354,7 +361,7 @@ async function parallelLimit<T>(tasks: (() => Promise<T>)[], limit: number): Pro
 }
 
 export async function estimateCalories(ingredients: Ingredient[]): Promise<number | null> {
-  if (!API_KEY || ingredients.length === 0) return null;
+  if (ingredients.length === 0) return null;
 
   const validIngs = ingredients.filter((ing) => ing.item.trim());
   if (validIngs.length === 0) return null;

@@ -7,7 +7,7 @@ import {
 import LazyImage from './LazyImage';
 import { useRouter } from 'expo-router';
 import { memo } from 'react';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { Recipe } from '../lib/supabase';
 import FamilyBadge from './FamilyBadge';
@@ -47,6 +47,15 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
             <Ionicons name="heart" size={14} color={Colors.primary} />
           </View>
         )}
+        {recipe.is_ai_generated ? (
+          <View style={styles.stockBadge} accessibilityLabel="AI generated — replace with your own">
+            <Ionicons name="sparkles" size={12} color={Colors.textSecondary} />
+          </View>
+        ) : recipe.is_stock_image ? (
+          <View style={styles.stockBadge} accessibilityLabel="Stock photo — replace with your own">
+            <MaterialCommunityIcons name="camera-off" size={12} color={Colors.textSecondary} />
+          </View>
+        ) : null}
       </View>
       <View style={styles.cardInfo}>
         <View style={styles.cardTitleRow}>
@@ -87,6 +96,17 @@ const styles = StyleSheet.create({
   heartBadge: {
     position: 'absolute' as const,
     bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  stockBadge: {
+    position: 'absolute' as const,
+    top: 4,
     right: 4,
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderRadius: 10,
