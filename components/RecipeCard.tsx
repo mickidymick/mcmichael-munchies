@@ -60,6 +60,11 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
       <View style={styles.cardInfo}>
         <View style={styles.cardTitleRow}>
           <FamilyBadge family={recipe.family} size={20} />
+          {recipe.recipe_type === 'personal_favorite' && (
+            <View style={styles.typeBadge} accessibilityLabel="Personal Favorite">
+              <Ionicons name="bookmark" size={10} color={Colors.primary} />
+            </View>
+          )}
           <Text style={styles.cardTitle} numberOfLines={1}>{recipe.title}</Text>
         </View>
         <Text style={styles.cardMeta} numberOfLines={1}>
@@ -118,6 +123,14 @@ const styles = StyleSheet.create({
   imagePlaceholder: { backgroundColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   cardInfo: { flex: 1, padding: 12, justifyContent: 'center', gap: 3 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  typeBadge: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: Colors.primary + '22',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
   cardMeta: { fontSize: 12, color: Colors.textSecondary },
   cardTime: { fontSize: 11, color: Colors.textSecondary },

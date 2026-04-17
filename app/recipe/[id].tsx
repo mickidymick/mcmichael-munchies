@@ -25,6 +25,7 @@ export default function RecipeDetailScreen() {
   const { isMemberOrAdmin, userId } = useUserRole();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
+  const [addedByName, setAddedByName] = useState<string | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -52,6 +53,17 @@ export default function RecipeDetailScreen() {
     if (err) { setError(true); setLoading(false); return; }
     setRecipe(data);
     setLoading(false);
+
+    if (data?.created_by) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', data.created_by)
+        .maybeSingle();
+      setAddedByName(profile?.full_name?.trim() || null);
+    } else {
+      setAddedByName(null);
+    }
   }
 
   async function checkFavorite() {
@@ -226,6 +238,20 @@ export default function RecipeDetailScreen() {
 
         {/* Meta */}
         <Text style={styles.meta}>{[recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}</Text>
+
+        {(recipe.recipe_type === 'personal_favorite' || addedByName) && (
+          <View style={styles.attribution}>
+            {recipe.recipe_type === 'personal_favorite' && (
+              <View style={styles.favoriteBadge}>
+                <Ionicons name="bookmark" size={12} color={Colors.primary} />
+                <Text style={styles.favoriteBadgeText}>Personal Favorite</Text>
+              </View>
+            )}
+            {addedByName && (
+              <Text style={styles.addedBy}>Added by {addedByName}</Text>
+            )}
+          </View>
+        )}
 
         {/* Time & Servings */}
         {(recipe.prep_time || recipe.cook_time || recipe.servings || recipe.estimated_calories) && (
@@ -409,6 +435,18 @@ const styles = StyleSheet.create({
   actionButton: { padding: 4 },
   favButton: {},
   meta: { fontSize: 13, color: Colors.textSecondary, marginBottom: 10 },
+  attribution: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 },
+  favoriteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary + '18',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  favoriteBadgeText: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+  addedBy: { fontSize: 12, color: Colors.textSecondary, fontStyle: 'italic' },
   infoBar: {
     flexDirection: 'row',
     backgroundColor: Colors.secondary,

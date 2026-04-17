@@ -30,10 +30,11 @@ export default function BrowseScreen() {
   const router = useRouter();
   const { isMemberOrAdmin } = useUserRole();
   const { isFavorite } = useFavorites();
-  const params = useLocalSearchParams<{ category?: string; query?: string; family?: string }>();
+  const params = useLocalSearchParams<{ category?: string; query?: string; family?: string; recipe_type?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(params.category ? [params.category] : []);
   const [selectedFamilies, setSelectedFamilies] = useState<string[]>(params.family ? [params.family] : []);
+  const [selectedRecipeTypes, setSelectedRecipeTypes] = useState<string[]>(params.recipe_type ? [params.recipe_type] : []);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedCookTimes, setSelectedCookTimes] = useState<string[]>([]);
   const [selectedSort, setSelectedSort] = useState('az');
@@ -56,7 +57,10 @@ export default function BrowseScreen() {
     if (params.family && !selectedFamilies.includes(params.family)) {
       setSelectedFamilies([params.family]);
     }
-  }, [params.category, params.query, params.family]);
+    if (params.recipe_type && !selectedRecipeTypes.includes(params.recipe_type)) {
+      setSelectedRecipeTypes([params.recipe_type]);
+    }
+  }, [params.category, params.query, params.family, params.recipe_type]);
 
   // Debounce search query
   useEffect(() => {
@@ -69,18 +73,19 @@ export default function BrowseScreen() {
     setPage(0);
     setHasMore(true);
     fetchRecipes(0, true);
-  }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
+  }, [debouncedQuery, selectedCategories, selectedFamilies, selectedRecipeTypes, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
 
   // Refresh on focus to pick up new/edited recipes
   useFocusEffect(
     useCallback(() => {
       fetchRecipes(0, true);
-    }, [debouncedQuery, selectedCategories, selectedFamilies, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary])
+    }, [debouncedQuery, selectedCategories, selectedFamilies, selectedRecipeTypes, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary])
   );
 
 
   const activeFilterCount = [
     selectedFamilies.length > 0,
+    selectedRecipeTypes.length > 0,
     selectedCategories.length > 0,
     selectedCuisines.length > 0,
     selectedCookTimes.length > 0,
@@ -97,13 +102,18 @@ export default function BrowseScreen() {
     const from = pageNum * fetchSize;
     const to = from + fetchSize - 1;
 
-    let req = supabase.from('recipes').select('id,title,description,image_url,family,categories,cuisine,prep_time,cook_time,estimated_calories,tags,ingredients,created_at', { count: 'exact' });
+    let req = supabase.from('recipes').select('id,title,description,image_url,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,ingredients,created_at', { count: 'exact' });
 
     // Server-side filters where possible
     if (selectedFamilies.length === 1) {
       req = req.eq('family', selectedFamilies[0]);
     } else if (selectedFamilies.length > 1) {
       req = req.in('family', selectedFamilies);
+    }
+    if (selectedRecipeTypes.length === 1) {
+      req = req.eq('recipe_type', selectedRecipeTypes[0]);
+    } else if (selectedRecipeTypes.length > 1) {
+      req = req.in('recipe_type', selectedRecipeTypes);
     }
     if (selectedCuisines.length === 1) {
       req = req.eq('cuisine', selectedCuisines[0]);
@@ -239,6 +249,12 @@ export default function BrowseScreen() {
         {/* Expandable filters */}
         {showFilters && (
           <View style={styles.filtersPanel}>
+            <ChipRow
+              label="Recipe Type"
+              items={[{ label: 'Family Recipe', value: 'family_recipe' }, { label: 'Personal Favorite', value: 'personal_favorite' }]}
+              selected={selectedRecipeTypes}
+              onToggle={(v) => setSelectedRecipeTypes(toggleMulti(selectedRecipeTypes, v))}
+            />
             <ChipRow label="Family" items={FAMILIES} selected={selectedFamilies} onToggle={(v) => setSelectedFamilies(toggleMulti(selectedFamilies, v))} />
             <ChipRow label="Category" items={CATEGORIES} selected={selectedCategories} onToggle={(v) => setSelectedCategories(toggleMulti(selectedCategories, v))} />
             <ChipRow label="Cuisine" items={CUISINES} selected={selectedCuisines} onToggle={(v) => setSelectedCuisines(toggleMulti(selectedCuisines, v))} />
@@ -250,6 +266,7 @@ export default function BrowseScreen() {
                 style={styles.clearButton}
                 onPress={() => {
                   setSelectedFamilies([]);
+                  setSelectedRecipeTypes([]);
                   setSelectedCategories([]);
                   setSelectedCuisines([]);
                   setSelectedCookTimes([]);
@@ -283,6 +300,7 @@ export default function BrowseScreen() {
           ) : (
             <TouchableOpacity onPress={() => {
               setSelectedFamilies([]);
+              setSelectedRecipeTypes([]);
               setSelectedCategories([]);
               setSelectedCuisines([]);
               setSelectedCookTimes([]);

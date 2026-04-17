@@ -16,7 +16,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
-import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
+import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../lib/autocomplete';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
@@ -38,6 +38,7 @@ export default function AddRecipeScreen() {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [recipeType, setRecipeType] = useState<RecipeType>('family_recipe');
   const [family, setFamily] = useState<RecipeFamily | ''>('');
   const [cuisine, setCuisine] = useState('');
   const [tagsInput, setTagsInput] = useState('');
@@ -115,10 +116,11 @@ export default function AddRecipeScreen() {
     dirtyRef.current = !!(
       title.trim() || description.trim() || notes.trim() || categories.length > 0 ||
       family || cuisine || tagsInput.trim() || prepTime || cookTime || servings || heroImage ||
+      recipeType !== 'family_recipe' ||
       ingredients.some((i) => i.item.trim()) ||
       steps.some((s) => s.instruction.trim())
     );
-  }, [title, description, notes, categories, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps]);
+  }, [title, description, notes, categories, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, recipeType, ingredients, steps]);
 
   // Warn on browser tab close
   useEffect(() => {
@@ -384,6 +386,7 @@ export default function AddRecipeScreen() {
       description: description.trim(),
       notes: notes.trim() || null,
       categories,
+      recipe_type: recipeType,
       family: family || null,
       prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
       cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
@@ -522,8 +525,31 @@ export default function AddRecipeScreen() {
           ))}
         </View>
 
+        {/* Recipe type */}
+        <Text style={styles.label}>Recipe Type</Text>
+        <View style={styles.chipWrap}>
+          <TouchableOpacity
+            style={[styles.chip, recipeType === 'family_recipe' && styles.chipActive]}
+            // @ts-ignore
+            dataSet={{ hover: 'chip' }}
+            onPress={() => setRecipeType('family_recipe')}
+          >
+            <Text style={[styles.chipText, recipeType === 'family_recipe' && styles.chipTextActive]}>Family Recipe</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.chip, recipeType === 'personal_favorite' && styles.chipActive]}
+            // @ts-ignore
+            dataSet={{ hover: 'chip' }}
+            onPress={() => setRecipeType('personal_favorite')}
+          >
+            <Text style={[styles.chipText, recipeType === 'personal_favorite' && styles.chipTextActive]}>Personal Favorite</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Family */}
-        <Text style={styles.label}>Family</Text>
+        <Text style={styles.label}>
+          Family{recipeType === 'personal_favorite' ? ' (optional)' : ''}
+        </Text>
         <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
             <TouchableOpacity

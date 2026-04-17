@@ -21,7 +21,7 @@ import { invalidateSearchCache } from '../../components/SearchBar';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
-import { supabase, Ingredient, Step, RecipeFamily } from '../../lib/supabase';
+import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../../lib/autocomplete';
 import { estimateCalories } from '../../lib/nutrition';
 import { useUserRole } from '../../lib/useUserRole';
@@ -40,6 +40,7 @@ export default function EditRecipeScreen() {
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [recipeType, setRecipeType] = useState<RecipeType>('family_recipe');
   const [family, setFamily] = useState<RecipeFamily | ''>('');
   const [cuisine, setCuisine] = useState('');
   const [tagsInput, setTagsInput] = useState('');
@@ -119,6 +120,7 @@ export default function EditRecipeScreen() {
         setCategories([data.category]);
       }
       setFamily(data.family ?? '');
+      setRecipeType((data.recipe_type as RecipeType) ?? 'family_recipe');
       setCuisine(data.cuisine ?? '');
       setTagsInput((data.tags ?? []).join(', '));
       setPrepTime(data.prep_time != null ? String(data.prep_time) : '');
@@ -137,6 +139,7 @@ export default function EditRecipeScreen() {
         description: data.description ?? '',
         notes: data.notes ?? '',
         categories: Array.isArray(data.categories) ? data.categories : data.category ? [data.category] : [],
+        recipeType: (data.recipe_type as RecipeType) ?? 'family_recipe',
         family: data.family ?? '',
         cuisine: data.cuisine ?? '',
         tags: (data.tags ?? []).join(', '),
@@ -155,11 +158,11 @@ export default function EditRecipeScreen() {
   useEffect(() => {
     if (!initialStateRef.current) { dirtyRef.current = false; return; }
     const current = JSON.stringify({
-      title, description, notes, categories, family, cuisine,
+      title, description, notes, categories, recipeType, family, cuisine,
       tags: tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps,
     });
     dirtyRef.current = current !== initialStateRef.current;
-  }, [title, description, notes, categories, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps]);
+  }, [title, description, notes, categories, recipeType, family, cuisine, tagsInput, prepTime, cookTime, servings, heroImage, ingredients, steps]);
 
   // Warn on browser tab close
   useEffect(() => {
@@ -393,6 +396,7 @@ export default function EditRecipeScreen() {
       description: description.trim(),
       notes: notes.trim() || null,
       categories,
+      recipe_type: recipeType,
       family: family || null,
       prep_time: prepTime ? Math.max(0, Math.min(parseInt(prepTime, 10) || 0, 1440)) : null,
       cook_time: cookTime ? Math.max(0, Math.min(parseInt(cookTime, 10) || 0, 1440)) : null,
@@ -512,7 +516,29 @@ export default function EditRecipeScreen() {
           ))}
         </View>
 
-        <Text style={styles.label}>Family</Text>
+        <Text style={styles.label}>Recipe Type</Text>
+        <View style={styles.chipWrap}>
+          {/* @ts-ignore dataSet for web hover */}
+          <TouchableOpacity
+            style={[styles.chip, recipeType === 'family_recipe' && styles.chipActive]}
+            onPress={() => setRecipeType('family_recipe')}
+            dataSet={{ hover: 'chip' }}
+          >
+            <Text style={[styles.chipText, recipeType === 'family_recipe' && styles.chipTextActive]}>Family Recipe</Text>
+          </TouchableOpacity>
+          {/* @ts-ignore dataSet for web hover */}
+          <TouchableOpacity
+            style={[styles.chip, recipeType === 'personal_favorite' && styles.chipActive]}
+            onPress={() => setRecipeType('personal_favorite')}
+            dataSet={{ hover: 'chip' }}
+          >
+            <Text style={[styles.chipText, recipeType === 'personal_favorite' && styles.chipTextActive]}>Personal Favorite</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.label}>
+          Family{recipeType === 'personal_favorite' ? ' (optional)' : ''}
+        </Text>
         <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
             // @ts-ignore dataSet for web hover

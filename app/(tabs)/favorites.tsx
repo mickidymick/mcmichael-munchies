@@ -48,7 +48,7 @@ export default function FavoritesScreen() {
 
       const { data, error: err } = await supabase
         .from('favorites')
-        .select('recipe_id, recipes(id,title,image_url,family,categories,cuisine,prep_time,cook_time,estimated_calories,tags,created_at)')
+        .select('recipe_id, recipes(id,title,image_url,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,created_at)')
         .eq('user_id', user.id);
 
       if (err) throw err;

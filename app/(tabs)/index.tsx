@@ -301,7 +301,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={fam}
                 style={styles.familyButton}
-                onPress={() => router.push({ pathname: '/browse', params: { family: fam } })}
+                onPress={() => router.push({ pathname: '/browse', params: { family: fam, recipe_type: 'family_recipe' } })}
                 // @ts-ignore
                 dataSet={{ hover: 'family' }}
               >
@@ -310,6 +310,16 @@ export default function HomeScreen() {
                 <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
               </TouchableOpacity>
             ))}
+            <TouchableOpacity
+              style={[styles.familyButton, styles.favoriteButton]}
+              onPress={() => router.push({ pathname: '/browse', params: { recipe_type: 'personal_favorite' } })}
+              // @ts-ignore
+              dataSet={{ hover: 'family' }}
+            >
+              <Ionicons name="bookmark-outline" size={22} color={Colors.primary} />
+              <Text style={styles.familyButtonText}>Personal Favorites</Text>
+              <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -578,6 +588,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.primary,
+  },
+  favoriteButton: {
+    borderStyle: 'dashed',
+    marginTop: 4,
   },
 
   // Category chips - compact
