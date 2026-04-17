@@ -10,10 +10,13 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
 
 const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { supabase, Recipe } from '../../lib/supabase';
+
+const BROWSE_CACHE_KEY = 'browse_cache_v1';
 import RecipeCard from '../../components/RecipeCard';
 import { useUserRole } from '../../lib/useUserRole';
 import { useFavorites } from '../../lib/useFavorites';
@@ -48,6 +51,25 @@ export default function BrowseScreen() {
   const [totalInDb, setTotalInDb] = useState(0);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const fetchId = useRef(0);
+  const hasCachedData = useRef(false);
+  const isDefaultView = !params.category && !params.query && !params.family && !params.recipe_type;
+
+  // Restore cache for default view
+  useEffect(() => {
+    if (!isDefaultView) return;
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(BROWSE_CACHE_KEY);
+        if (cached) {
+          const { recipes: cr, totalInDb: t } = JSON.parse(cached);
+          setRecipes(cr ?? []);
+          setTotalInDb(t ?? 0);
+          setLoading(false);
+          hasCachedData.current = true;
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   useEffect(() => {
     if (params.category && !selectedCategories.includes(params.category)) {
@@ -94,15 +116,15 @@ export default function BrowseScreen() {
 
   async function fetchRecipes(pageNum: number, reset: boolean) {
     const currentFetchId = ++fetchId.current;
-    if (reset) setLoading(true);
-    else setLoadingMore(true);
+    if (reset && !hasCachedData.current) setLoading(true);
+    else if (!reset) setLoadingMore(true);
 
     const hasClientFilters = selectedCategories.length > 0 || debouncedQuery.trim() || selectedCookTimes.length > 0 || selectedDietary.length > 0;
     const fetchSize = hasClientFilters ? FETCH_SIZE : PAGE_SIZE;
     const from = pageNum * fetchSize;
     const to = from + fetchSize - 1;
 
-    let req = supabase.from('recipes').select('id,title,description,image_url,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,ingredients,created_at', { count: 'exact' });
+    let req = supabase.from('recipes').select('id,title,description,image_url,blurhash,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,ingredients,created_at', { count: 'exact' });
 
     // Server-side filters where possible
     if (selectedFamilies.length === 1) {
@@ -199,6 +221,15 @@ export default function BrowseScreen() {
     setHasMore(from + fetchSize < totalFromDb);
     setLoading(false);
     setLoadingMore(false);
+    hasCachedData.current = true;
+
+    // Cache the default view (first page, no filters)
+    if (reset && pageNum === 0 && isDefaultView) {
+      AsyncStorage.setItem(BROWSE_CACHE_KEY, JSON.stringify({
+        recipes: results,
+        totalInDb: totalFromDb,
+      })).catch(() => { /* ignore */ });
+    }
   }
 
   function loadMore() {

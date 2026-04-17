@@ -1,9 +1,14 @@
 import { useState } from 'react';
-import { Image, ImageProps, Platform, View, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Image, ImageProps } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 
-export default function LazyImage(props: ImageProps) {
+type LazyImageProps = ImageProps & {
+  blurhash?: string | null;
+};
+
+export default function LazyImage({ blurhash, ...props }: LazyImageProps) {
   const [error, setError] = useState(false);
 
   if (error || !props.source) {
@@ -14,16 +19,15 @@ export default function LazyImage(props: ImageProps) {
     );
   }
 
-  const imageProps = {
-    ...props,
-    onError: () => setError(true),
-  };
-
-  if (Platform.OS === 'web') {
-    // @ts-ignore - loading is a valid HTML img attribute but not in RN types
-    return <Image {...imageProps} loading="lazy" />;
-  }
-  return <Image {...imageProps} />;
+  return (
+    <Image
+      {...props}
+      placeholder={blurhash ? { blurhash } : undefined}
+      transition={250}
+      cachePolicy="disk"
+      onError={() => setError(true)}
+    />
+  );
 }
 
 const styles = StyleSheet.create({

@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../lib/autocomplete';
-import { downscaleImageBlob } from '../lib/images';
+import { downscaleImageBlob, generateBlurhash } from '../lib/images';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
@@ -277,10 +277,10 @@ export default function AddRecipeScreen() {
         setPendingCrop({ uri: result.assets[0].uri, target: index });
       } else {
         setUploadingStepIndex(index);
-        const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+        const result2 = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
         setUploadingStepIndex(null);
-        if (url) {
-          setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+        if (result2) {
+          setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: result2.url } : s));
         }
       }
     }
@@ -296,10 +296,10 @@ export default function AddRecipeScreen() {
       setIsAiGenerated(placeholderType === 'ai');
     } else {
       setUploadingStepIndex(target);
-      const url = await uploadImage(croppedUri, `step-${Date.now()}`);
+      const stepResult = await uploadImage(croppedUri, `step-${Date.now()}`);
       setUploadingStepIndex(null);
-      if (url) {
-        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: url } : s));
+      if (stepResult) {
+        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: stepResult.url } : s));
       }
     }
   }
@@ -307,7 +307,7 @@ export default function AddRecipeScreen() {
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
-  async function uploadImage(uri: string, name: string): Promise<string | null> {
+  async function uploadImage(uri: string, name: string): Promise<{ url: string; blurhash: string | null } | null> {
     try {
       const response = await fetch(uri);
       const originalBlob = await response.blob();
@@ -323,6 +323,7 @@ export default function AddRecipeScreen() {
       }
 
       const blob = await downscaleImageBlob(originalBlob);
+      const blurhash = await generateBlurhash(blob);
       const mimeType = blob.type || originalType;
 
       const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
@@ -339,7 +340,7 @@ export default function AddRecipeScreen() {
       }
 
       const { data } = supabase.storage.from('recipe-images').getPublicUrl(path);
-      return data.publicUrl;
+      return { url: data.publicUrl, blurhash };
     } catch (e: any) {
       Alert.alert('Image upload failed', e?.message ?? 'Could not process the selected image.');
       return null;
@@ -367,10 +368,17 @@ export default function AddRecipeScreen() {
     setSaving(true);
 
     let imageUrl: string | null = null;
+    let blurhash: string | null = null;
     if (heroImage) {
-      imageUrl = (heroImage.startsWith('blob:') || heroImage.startsWith('file://'))
-        ? await uploadImage(heroImage, `hero-${Date.now()}`)
-        : heroImage;
+      if (heroImage.startsWith('blob:') || heroImage.startsWith('file://')) {
+        const uploadResult = await uploadImage(heroImage, `hero-${Date.now()}`);
+        if (uploadResult) {
+          imageUrl = uploadResult.url;
+          blurhash = uploadResult.blurhash;
+        }
+      } else {
+        imageUrl = heroImage;
+      }
     }
 
     const tags = tagsInput
@@ -399,6 +407,7 @@ export default function AddRecipeScreen() {
       cuisine,
       tags,
       image_url: imageUrl,
+      blurhash,
       is_stock_image: isStockImage && !!imageUrl,
       is_ai_generated: isAiGenerated && !!imageUrl,
       ingredients: cleanIngredients,

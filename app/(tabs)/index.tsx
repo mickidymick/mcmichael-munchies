@@ -15,13 +15,17 @@ const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+
+const HOME_CACHE_KEY = 'home_cache_v1';
 import SearchBar from '../../components/SearchBar';
 import { useUserRole } from '../../lib/useUserRole';
 import { useFavorites } from '../../lib/useFavorites';
 import FamilyBadge from '../../components/FamilyBadge';
 import LazyImage from '../../components/LazyImage';
+import { Image as ExpoImage } from 'expo-image';
 import { FAMILIES, CATEGORY_ICONS } from '../../constants/recipes';
 
 const { width } = Dimensions.get('window');
@@ -42,26 +46,42 @@ export default function HomeScreen() {
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const hasCachedData = useRef(false);
 
   const CARD_GAP = 8;
   const CARD_WIDTH = (width - 32 - CARD_GAP * 2) / 3;
 
+  // On mount: restore cached data instantly, then fetch fresh data
   useEffect(() => {
-    loadRecipes();
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(HOME_CACHE_KEY);
+        if (cached) {
+          const { totalCount: tc, carouselRecipes: cr, recentRecipes: rr } = JSON.parse(cached);
+          setTotalCount(tc ?? 0);
+          setCarouselRecipes(cr ?? []);
+          setRecentRecipes(rr ?? []);
+          setLoading(false);
+          hasCachedData.current = true;
+        }
+      } catch { /* ignore cache errors */ }
+      fetchRecipes();
+    })();
   }, []);
 
   // Refresh on focus to pick up new/edited recipes
   useFocusEffect(
     useCallback(() => {
-      loadRecipes();
+      fetchRecipes();
     }, [])
   );
 
-  async function loadRecipes() {
-    setLoading(true);
+  async function fetchRecipes() {
+    // If we have cached data, skip the loading spinner — refresh silently
+    if (!hasCachedData.current) setLoading(true);
     setLoadError(false);
     try {
-      const listColumns = 'id,title,image_url,family,categories,cuisine,prep_time,cook_time,description,estimated_calories';
+      const listColumns = 'id,title,image_url,blurhash,family,categories,cuisine,prep_time,cook_time,description,estimated_calories';
       const [countRes, recentRes, carouselRes] = await Promise.all([
         supabase.from('recipes').select('id', { count: 'exact', head: true }),
         supabase.from('recipes').select(listColumns).order('created_at', { ascending: false }).limit(6),
@@ -70,16 +90,24 @@ export default function HomeScreen() {
       if (countRes.error && recentRes.error && carouselRes.error) {
         setLoadError(true);
       } else {
-        if (countRes.count !== null) setTotalCount(countRes.count);
-        if (recentRes.data) setRecentRecipes(recentRes.data as Recipe[]);
-        if (carouselRes.data) {
-          const list = carouselRes.data as Recipe[];
-          setCarouselRecipes(list);
-          // Warm the cache so carousel frames don't pop in one-by-one.
-          for (const r of list) {
-            if (r.image_url) Image.prefetch(r.image_url).catch(() => { /* ignore */ });
-          }
-        }
+        const newCount = countRes.count ?? 0;
+        const newRecent = (recentRes.data ?? []) as Recipe[];
+        const newCarousel = (carouselRes.data ?? []) as Recipe[];
+
+        setTotalCount(newCount);
+        setRecentRecipes(newRecent);
+        setCarouselRecipes(newCarousel);
+
+        // Warm the image cache
+        const urls = newCarousel.map((r) => r.image_url).filter(Boolean) as string[];
+        if (urls.length) ExpoImage.prefetch(urls).catch(() => { /* ignore */ });
+
+        // Persist for next launch
+        AsyncStorage.setItem(HOME_CACHE_KEY, JSON.stringify({
+          totalCount: newCount,
+          carouselRecipes: newCarousel,
+          recentRecipes: newRecent,
+        })).catch(() => { /* ignore */ });
       }
     } catch {
       setLoadError(true);
@@ -218,7 +246,7 @@ export default function HomeScreen() {
               {...cardHoverProps(index)}
             >
                 {item.image_url ? (
-                  <LazyImage source={{ uri: item.image_url }} style={styles.carouselCardImage} resizeMode="cover" accessibilityLabel={`Photo of ${item.title}`} />
+                  <LazyImage source={{ uri: item.image_url }} blurhash={item.blurhash} style={styles.carouselCardImage} contentFit="cover" accessibilityLabel={`Photo of ${item.title}`} />
                 ) : (
                   <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
                     <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
@@ -265,7 +293,7 @@ export default function HomeScreen() {
       )}
 
       {loadError && (
-        <TouchableOpacity style={styles.errorBanner} onPress={loadRecipes}>
+        <TouchableOpacity style={styles.errorBanner} onPress={fetchRecipes}>
           <Ionicons name="cloud-offline-outline" size={18} color={Colors.danger} />
           <Text style={styles.errorBannerText}>Failed to load recipes. Tap to retry.</Text>
         </TouchableOpacity>
@@ -368,7 +396,7 @@ export default function HomeScreen() {
                 >
                   <View>
                     {recipe.image_url ? (
-                      <LazyImage source={{ uri: recipe.image_url }} style={styles.recipeCardImage} accessibilityLabel={`Photo of ${recipe.title}`} />
+                      <LazyImage source={{ uri: recipe.image_url }} blurhash={recipe.blurhash} style={styles.recipeCardImage} contentFit="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
                     ) : (
                       <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
                         <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />

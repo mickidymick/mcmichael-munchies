@@ -8,11 +8,14 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
+
+const FAVORITES_CACHE_KEY = 'favorites_cache_v1';
 import RecipeCard from '../../components/RecipeCard';
 import SearchBar from '../../components/SearchBar';
 import ChipRow from '../../components/ChipRow';
@@ -34,9 +37,28 @@ export default function FavoritesScreen() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [error, setError] = useState(false);
+  const hasCachedData = useRef(false);
+
+  // Restore cache on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const cached = await AsyncStorage.getItem(FAVORITES_CACHE_KEY);
+        if (cached) {
+          const { favorites, loggedIn: li } = JSON.parse(cached);
+          setAllFavorites(favorites ?? []);
+          setLoggedIn(li ?? false);
+          setLoading(false);
+          hasCachedData.current = true;
+        }
+      } catch { /* ignore */ }
+      loadFavorites();
+    })();
+  }, []);
 
   const loadFavorites = useCallback(async () => {
     setError(false);
+    if (!hasCachedData.current) setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -48,7 +70,7 @@ export default function FavoritesScreen() {
 
       const { data, error: err } = await supabase
         .from('favorites')
-        .select('recipe_id, recipes(id,title,image_url,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,created_at)')
+        .select('recipe_id, recipes(id,title,image_url,blurhash,family,recipe_type,categories,cuisine,prep_time,cook_time,estimated_calories,tags,created_at)')
         .eq('user_id', user.id);
 
       if (err) throw err;
@@ -58,6 +80,12 @@ export default function FavoritesScreen() {
         .filter((r): r is Recipe => r !== null);
 
       setAllFavorites(recipes);
+      hasCachedData.current = true;
+
+      AsyncStorage.setItem(FAVORITES_CACHE_KEY, JSON.stringify({
+        favorites: recipes,
+        loggedIn: true,
+      })).catch(() => { /* ignore */ });
     } catch {
       setError(true);
     }

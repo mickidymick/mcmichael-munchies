@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { encode } from 'blurhash';
 
 const DEFAULT_MAX_DIMENSION = 1600;
 const DEFAULT_JPEG_QUALITY = 0.85;
@@ -51,6 +52,29 @@ export async function downscaleImageBlob(
     return out;
   } catch {
     return blob;
+  }
+}
+
+/**
+ * Generate a blurhash string from an image blob (web only).
+ * Returns null on native or on failure.
+ */
+export async function generateBlurhash(blob: Blob): Promise<string | null> {
+  if (Platform.OS !== 'web') return null;
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const size = 32;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) { bitmap.close?.(); return null; }
+    ctx.drawImage(bitmap, 0, 0, size, size);
+    bitmap.close?.();
+    const imageData = ctx.getImageData(0, 0, size, size);
+    return encode(imageData.data, size, size, 4, 3);
+  } catch {
+    return null;
   }
 }
 

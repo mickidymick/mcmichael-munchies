@@ -18,6 +18,7 @@ export type Recipe = {
   description: string;
   notes: string | null;
   image_url: string | null;
+  blurhash: string | null;
   is_stock_image?: boolean;
   is_ai_generated?: boolean;
   categories: string[];

@@ -23,7 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../../lib/autocomplete';
-import { downscaleImageBlob } from '../../lib/images';
+import { downscaleImageBlob, generateBlurhash } from '../../lib/images';
 import { estimateCalories } from '../../lib/nutrition';
 import { useUserRole } from '../../lib/useUserRole';
 import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../../constants/recipes';
@@ -311,9 +311,9 @@ export default function EditRecipeScreen() {
         setPendingCrop({ uri: result.assets[0].uri, target: index });
       } else {
         setUploadingStepIndex(index);
-        const url = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
+        const result2 = await uploadImage(result.assets[0].uri, `step-${Date.now()}`);
         setUploadingStepIndex(null);
-        if (url) setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: url } : s));
+        if (result2) setSteps((prev) => prev.map((s, i) => i === index ? { ...s, image_url: result2.url } : s));
       }
     }
   }
@@ -328,10 +328,10 @@ export default function EditRecipeScreen() {
       setIsAiGenerated(placeholderType === 'ai');
     } else {
       setUploadingStepIndex(target);
-      const url = await uploadImage(croppedUri, `step-${Date.now()}`);
+      const stepResult = await uploadImage(croppedUri, `step-${Date.now()}`);
       setUploadingStepIndex(null);
-      if (url) {
-        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: url } : s));
+      if (stepResult) {
+        setSteps((prev) => prev.map((s, i) => i === target ? { ...s, image_url: stepResult.url } : s));
       }
     }
   }
@@ -339,7 +339,7 @@ export default function EditRecipeScreen() {
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
-  async function uploadImage(uri: string, name: string): Promise<string | null> {
+  async function uploadImage(uri: string, name: string): Promise<{ url: string; blurhash: string | null } | null> {
     try {
       const response = await fetch(uri);
       const originalBlob = await response.blob();
@@ -355,6 +355,7 @@ export default function EditRecipeScreen() {
       }
 
       const blob = await downscaleImageBlob(originalBlob);
+      const blurhash = await generateBlurhash(blob);
       const mimeType = blob.type || originalType;
 
       const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
@@ -365,7 +366,7 @@ export default function EditRecipeScreen() {
         .upload(path, blob, { contentType: mimeType });
       if (error) { Alert.alert('Image upload failed', error.message); return null; }
       const { data } = supabase.storage.from('recipe-images').getPublicUrl(path);
-      return data.publicUrl;
+      return { url: data.publicUrl, blurhash };
     } catch (e: any) {
       Alert.alert('Image upload failed', e?.message ?? 'Could not process the selected image.');
       return null;
@@ -383,8 +384,15 @@ export default function EditRecipeScreen() {
     setSaving(true);
 
     let imageUrl: string | null = heroImage;
+    let blurhash: string | null = null;
     if (heroImage && (heroImage.startsWith('blob:') || heroImage.startsWith('file://'))) {
-      imageUrl = await uploadImage(heroImage, `hero-${Date.now()}`);
+      const uploadResult = await uploadImage(heroImage, `hero-${Date.now()}`);
+      if (uploadResult) {
+        imageUrl = uploadResult.url;
+        blurhash = uploadResult.blurhash;
+      } else {
+        imageUrl = null;
+      }
     }
 
     const tags = tagsInput.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
@@ -409,6 +417,7 @@ export default function EditRecipeScreen() {
       cuisine,
       tags,
       image_url: imageUrl,
+      ...(blurhash ? { blurhash } : {}),
       is_stock_image: isStockImage && !!imageUrl,
       is_ai_generated: isAiGenerated && !!imageUrl,
       ingredients: cleanIngredients,

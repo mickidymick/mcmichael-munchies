@@ -33,8 +33,9 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
         {recipe.image_url ? (
           <LazyImage
             source={{ uri: recipe.image_url }}
+            blurhash={recipe.blurhash}
             style={styles.cardImage}
-            resizeMode="cover"
+            contentFit="cover"
             accessibilityLabel={`Photo of ${recipe.title}`}
           />
         ) : (
