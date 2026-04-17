@@ -7,10 +7,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
@@ -18,6 +20,9 @@ import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import { CATEGORIES, CUISINES } from '../constants/recipes';
 import { invalidateSearchCache } from '../components/SearchBar';
+
+const MAX_PHOTOS = 6;
+const MAX_IMAGE_DIMENSION = 1568;
 
 type ImportedRecipe = {
   title: string;
@@ -74,6 +79,9 @@ Rules:
 export default function AutoImportScreen() {
   const router = useRouter();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
+  const [mode, setMode] = useState<'photos' | 'paste'>('photos');
+  const [photos, setPhotos] = useState<string[]>([]);
+  const [extracting, setExtracting] = useState(false);
   const [jsonInput, setJsonInput] = useState('');
   const [recipes, setRecipes] = useState<ImportedRecipe[]>([]);
   const [statuses, setStatuses] = useState<RecipeStatus[]>([]);
@@ -83,12 +91,36 @@ export default function AutoImportScreen() {
   const [promptCopied, setPromptCopied] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
 
+  function blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        // Strip "data:*/*;base64," prefix
+        const comma = result.indexOf(',');
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+      reader.readAsDataURL(blob);
+    });
+  }
+
   function handleParse() {
+    parseAndImport(jsonInput);
+  }
+
+  function parseAndImport(rawText: string) {
     setParseError('');
     try {
-      let text = jsonInput.trim();
+      let text = rawText.trim();
       if (text.startsWith('```')) {
         text = text.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');
+      }
+      // Gemini sometimes wraps JSON in prose — grab the first [...] or {...} block.
+      if (!text.startsWith('[') && !text.startsWith('{')) {
+        const arrayMatch = text.match(/\[[\s\S]*\]/);
+        const objMatch = text.match(/\{[\s\S]*\}/);
+        text = arrayMatch?.[0] ?? objMatch?.[0] ?? text;
       }
       const parsed = JSON.parse(text);
       const arr = Array.isArray(parsed) ? parsed : [parsed];
@@ -209,6 +241,91 @@ export default function AutoImportScreen() {
     runImport(failed);
   }
 
+  async function pickPhotos() {
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) {
+      Alert.alert('Limit reached', `You can upload up to ${MAX_PHOTOS} photos at once.`);
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
+      quality: 0.85,
+    });
+    if (!result.canceled) {
+      setPhotos((prev) => [...prev, ...result.assets.map((a) => a.uri)].slice(0, MAX_PHOTOS));
+    }
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function toBase64JpegDownscaled(uri: string): Promise<{ mimeType: string; data: string }> {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    // On web, downscale via canvas to keep request size / token cost reasonable.
+    if (Platform.OS === 'web') {
+      const bitmap = await createImageBitmap(blob);
+      const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
+      const w = Math.round(bitmap.width * scale);
+      const h = Math.round(bitmap.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not supported');
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      const downscaled: Blob = await new Promise((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/jpeg', 0.85),
+      );
+      const data = await blobToBase64(downscaled);
+      return { mimeType: 'image/jpeg', data };
+    }
+
+    const data = await blobToBase64(blob);
+    return { mimeType: blob.type || 'image/jpeg', data };
+  }
+
+  async function extractFromPhotos() {
+    if (photos.length === 0) return;
+    setExtracting(true);
+    setParseError('');
+    try {
+      const imageParts = await Promise.all(photos.map(toBase64JpegDownscaled));
+
+      // Use direct fetch so we can see error bodies (functions.invoke hides them on non-2xx).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not signed in');
+      const url = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/vision-import`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        },
+        body: JSON.stringify({ images: imageParts, prompt: AI_PROMPT }),
+      });
+      const raw = await res.text();
+      let payload: any = null;
+      try { payload = raw ? JSON.parse(raw) : null; } catch { /* leave as raw */ }
+      if (!res.ok) {
+        const msg = payload?.error ?? raw ?? `HTTP ${res.status}`;
+        throw new Error(`${res.status}: ${msg}`);
+      }
+      if (!payload?.text) throw new Error('No text returned from vision model');
+      setJsonInput(payload.text);
+      parseAndImport(payload.text);
+    } catch (e: any) {
+      setParseError(e?.message ?? 'Could not extract recipes from photos.');
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   async function copyPrompt() {
     if (Platform.OS === 'web') {
       await navigator.clipboard.writeText(AI_PROMPT);
@@ -321,76 +438,171 @@ export default function AutoImportScreen() {
     );
   }
 
-  // ─── Paste screen ─────────────────────────────────────────────────────────────
+  // ─── Paste / Upload screen ────────────────────────────────────────────────────
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Instructions */}
-      <View style={styles.instructionCard}>
-        <View style={styles.instructionHeader}>
-          <Ionicons name="book-outline" size={24} color={Colors.primary} />
-          <Text style={styles.instructionTitle}>Import Recipes from Photos</Text>
-        </View>
-        <Text style={styles.instructionText}>
-          1. Copy the prompt below using the Copy button{'\n'}
-          2. Open any AI chatbot (ChatGPT, Claude, Gemini, etc.) and start a new chat{'\n'}
-          3. Paste the prompt and attach photos of your cookbook pages{'\n'}
-          4. The AI will read the recipes and give you formatted text{'\n'}
-          5. Copy the entire response{'\n'}
-          6. Come back here, paste it in the box below, and hit Import
-        </Text>
+      {/* Mode toggle */}
+      <View style={styles.modeToggle}>
+        <TouchableOpacity
+          style={[styles.modeBtn, mode === 'photos' && styles.modeBtnActive]}
+          onPress={() => setMode('photos')}
+        >
+          <Ionicons
+            name="camera-outline"
+            size={16}
+            color={mode === 'photos' ? '#FFF' : Colors.text}
+          />
+          <Text style={[styles.modeBtnText, mode === 'photos' && styles.modeBtnTextActive]}>
+            Upload Photos
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeBtn, mode === 'paste' && styles.modeBtnActive]}
+          onPress={() => setMode('paste')}
+        >
+          <Ionicons
+            name="clipboard-outline"
+            size={16}
+            color={mode === 'paste' ? '#FFF' : Colors.text}
+          />
+          <Text style={[styles.modeBtnText, mode === 'paste' && styles.modeBtnTextActive]}>
+            Paste Text
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Copyable prompt */}
-      <View style={styles.promptSection}>
-        <View style={styles.promptHeader}>
-          <Text style={styles.promptLabel}>Prompt for AI</Text>
-          <TouchableOpacity style={styles.copyBtn} onPress={copyPrompt}>
-            <Ionicons
-              name={promptCopied ? 'checkmark' : 'copy-outline'}
-              size={16}
-              color={promptCopied ? Colors.primary : Colors.textSecondary}
-            />
-            <Text style={[styles.copyBtnText, promptCopied && { color: Colors.primary }]}>
-              {promptCopied ? 'Copied!' : 'Copy'}
+      {mode === 'photos' ? (
+        <>
+          <View style={styles.instructionCard}>
+            <View style={styles.instructionHeader}>
+              <Ionicons name="sparkles-outline" size={24} color={Colors.primary} />
+              <Text style={styles.instructionTitle}>Extract from Cookbook Photos</Text>
+            </View>
+            <Text style={styles.instructionText}>
+              Upload up to {MAX_PHOTOS} photos of recipe pages. Our vision AI will read them
+              and turn them into importable recipes. Clear, well-lit photos work best.
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.uploadBtn} onPress={pickPhotos} disabled={extracting}>
+            <Ionicons name="image-outline" size={20} color={Colors.primary} />
+            <Text style={styles.uploadBtnText}>
+              {photos.length === 0 ? 'Select photos' : `Add more (${photos.length}/${MAX_PHOTOS})`}
             </Text>
           </TouchableOpacity>
-        </View>
-        <ScrollView style={styles.promptBox} nestedScrollEnabled>
-          <Text style={styles.promptText} selectable>{AI_PROMPT}</Text>
-        </ScrollView>
-      </View>
 
-      {/* JSON input */}
-      <Text style={styles.pasteLabel}>Paste the AI response here</Text>
-      <TextInput
-        style={styles.jsonInput}
-        placeholder='Paste the full response from the AI here...'
-        placeholderTextColor={Colors.textSecondary}
-        value={jsonInput}
-        onChangeText={(v) => {
-          setJsonInput(v);
-          setParseError('');
-        }}
-        multiline
-        numberOfLines={12}
-      />
+          {photos.length > 0 && (
+            <View style={styles.thumbGrid}>
+              {photos.map((uri, i) => (
+                <View key={`${uri}-${i}`} style={styles.thumbWrap}>
+                  <Image source={{ uri }} style={styles.thumb} />
+                  {!extracting && (
+                    <TouchableOpacity
+                      style={styles.thumbRemove}
+                      onPress={() => removePhoto(i)}
+                      accessibilityLabel="Remove photo"
+                    >
+                      <Ionicons name="close" size={14} color="#FFF" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          )}
 
-      {parseError ? (
-        <View style={styles.errorBox}>
-          <Ionicons name="alert-circle" size={16} color={Colors.danger} />
-          <Text style={styles.errorText}>{parseError}</Text>
-        </View>
-      ) : null}
+          {parseError ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={Colors.danger} />
+              <Text style={styles.errorText}>{parseError}</Text>
+            </View>
+          ) : null}
 
-      <TouchableOpacity
-        style={[styles.parseBtn, !jsonInput.trim() && styles.parseBtnDisabled]}
-        onPress={handleParse}
-        disabled={!jsonInput.trim()}
-      >
-        <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
-        <Text style={styles.parseBtnText}>Import Recipes</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.parseBtn, (photos.length === 0 || extracting) && styles.parseBtnDisabled]}
+            onPress={extractFromPhotos}
+            disabled={photos.length === 0 || extracting}
+          >
+            {extracting ? (
+              <>
+                <ActivityIndicator color="#FFF" />
+                <Text style={styles.parseBtnText}>Reading your recipes...</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="sparkles" size={18} color="#FFF" />
+                <Text style={styles.parseBtnText}>Extract Recipes</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </>
+      ) : (
+        <>
+          <View style={styles.instructionCard}>
+            <View style={styles.instructionHeader}>
+              <Ionicons name="book-outline" size={24} color={Colors.primary} />
+              <Text style={styles.instructionTitle}>Import with an External AI Chat</Text>
+            </View>
+            <Text style={styles.instructionText}>
+              1. Copy the prompt below using the Copy button{'\n'}
+              2. Open any AI chatbot (ChatGPT, Claude, Gemini, etc.) and start a new chat{'\n'}
+              3. Paste the prompt and attach photos of your cookbook pages{'\n'}
+              4. The AI will read the recipes and give you formatted text{'\n'}
+              5. Copy the entire response{'\n'}
+              6. Come back here, paste it in the box below, and hit Import
+            </Text>
+          </View>
+
+          <View style={styles.promptSection}>
+            <View style={styles.promptHeader}>
+              <Text style={styles.promptLabel}>Prompt for AI</Text>
+              <TouchableOpacity style={styles.copyBtn} onPress={copyPrompt}>
+                <Ionicons
+                  name={promptCopied ? 'checkmark' : 'copy-outline'}
+                  size={16}
+                  color={promptCopied ? Colors.primary : Colors.textSecondary}
+                />
+                <Text style={[styles.copyBtnText, promptCopied && { color: Colors.primary }]}>
+                  {promptCopied ? 'Copied!' : 'Copy'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.promptBox} nestedScrollEnabled>
+              <Text style={styles.promptText} selectable>{AI_PROMPT}</Text>
+            </ScrollView>
+          </View>
+
+          <Text style={styles.pasteLabel}>Paste the AI response here</Text>
+          <TextInput
+            style={styles.jsonInput}
+            placeholder='Paste the full response from the AI here...'
+            placeholderTextColor={Colors.textSecondary}
+            value={jsonInput}
+            onChangeText={(v) => {
+              setJsonInput(v);
+              setParseError('');
+            }}
+            multiline
+            numberOfLines={12}
+          />
+
+          {parseError ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={Colors.danger} />
+              <Text style={styles.errorText}>{parseError}</Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            style={[styles.parseBtn, !jsonInput.trim() && styles.parseBtnDisabled]}
+            onPress={handleParse}
+            disabled={!jsonInput.trim()}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color="#FFF" />
+            <Text style={styles.parseBtnText}>Import Recipes</Text>
+          </TouchableOpacity>
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -398,6 +610,72 @@ export default function AutoImportScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 20, paddingBottom: 60, maxWidth: 700, width: '100%', alignSelf: 'center' },
+
+  // Mode toggle
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  modeBtnActive: { backgroundColor: Colors.primary },
+  modeBtnText: { fontSize: 14, fontWeight: '600', color: Colors.text },
+  modeBtnTextActive: { color: '#FFF' },
+
+  // Upload
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  uploadBtnText: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
+  thumbGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  thumbWrap: {
+    position: 'relative',
+    width: 96,
+    height: 96,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  thumb: { width: '100%', height: '100%' },
+  thumbRemove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Instructions
   instructionCard: {
