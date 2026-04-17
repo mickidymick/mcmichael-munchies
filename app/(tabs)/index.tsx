@@ -5,18 +5,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Dimensions,
-  TextInput,
   Platform,
-  ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 
-const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
+const HEADER_TOP = Layout.headerTop;
 import { supabase, Recipe } from '../../lib/supabase';
 
 const HOME_CACHE_KEY = 'home_cache_v1';
@@ -27,11 +25,13 @@ import FamilyBadge from '../../components/FamilyBadge';
 import LazyImage from '../../components/LazyImage';
 import { Image as ExpoImage } from 'expo-image';
 import { FAMILIES, CATEGORY_ICONS } from '../../constants/recipes';
+import { CarouselSkeleton, HomeGridSkeleton } from '../../components/Skeleton';
 
-const { width } = Dimensions.get('window');
+const CARD_GAP = 8;
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
   const { isMemberOrAdmin } = useUserRole();
   const { isFavorite } = useFavorites();
   const [carouselRecipes, setCarouselRecipes] = useState<Recipe[]>([]);
@@ -47,9 +47,10 @@ export default function HomeScreen() {
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
   const hasCachedData = useRef(false);
+  const initialFetchDone = useRef(false);
 
-  const CARD_GAP = 8;
-  const CARD_WIDTH = (width - 32 - CARD_GAP * 2) / 3;
+  const carouselWidth = Math.min(width, Layout.maxWidth);
+  const CARD_WIDTH = (carouselWidth - 32 - CARD_GAP * 2) / 3;
 
   // On mount: restore cached data instantly, then fetch fresh data
   useEffect(() => {
@@ -66,12 +67,14 @@ export default function HomeScreen() {
         }
       } catch { /* ignore cache errors */ }
       fetchRecipes();
+      initialFetchDone.current = true;
     })();
   }, []);
 
-  // Refresh on focus to pick up new/edited recipes
+  // Refresh on focus — but skip the very first mount (already handled above)
   useFocusEffect(
     useCallback(() => {
+      if (!initialFetchDone.current) return;
       fetchRecipes();
     }, [])
   );
@@ -115,23 +118,33 @@ export default function HomeScreen() {
     setLoading(false);
   }
 
-  // Auto-scroll carousel - interval only exists when autoScroll is true
+  // Auto-scroll carousel using requestAnimationFrame
   useEffect(() => {
     if (!autoScroll || carouselRecipes.length < 2) return;
-    // One full set width - when we pass this, wrap back seamlessly
     const oneSetWidth = carouselRecipes.length * (CARD_WIDTH + CARD_GAP);
-    const interval = setInterval(() => {
-      if (hoveringRef.current) return;
-      scrollPos.current += 0.5;
-      // Wrap around using modulo so it works regardless of where user swiped to
-      if (scrollPos.current >= oneSetWidth) {
-        scrollPos.current = scrollPos.current - oneSetWidth;
-        scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
-      } else {
-        scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
+    let rafId: number;
+    let lastTime = 0;
+    const PIXELS_PER_SECOND = 30;
+
+    function tick(time: number) {
+      if (lastTime) {
+        const delta = time - lastTime;
+        if (!hoveringRef.current) {
+          scrollPos.current += (PIXELS_PER_SECOND * delta) / 1000;
+          if (scrollPos.current >= oneSetWidth) {
+            scrollPos.current -= oneSetWidth;
+            scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
+          } else {
+            scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
+          }
+        }
       }
-    }, 50);
-    return () => clearInterval(interval);
+      lastTime = time;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
   }, [autoScroll, carouselRecipes.length, CARD_WIDTH]);
 
   const carouselData = useMemo(() =>
@@ -148,6 +161,16 @@ export default function HomeScreen() {
           onMouseLeave: () => { hoveringRef.current = false; setHoveredCard(null); },
         }
       : {}, []);
+
+  function scrollCarousel(direction: 'left' | 'right') {
+    const offset = direction === 'left' ? -CARD_WIDTH - CARD_GAP : CARD_WIDTH + CARD_GAP;
+    scrollPos.current = Math.max(0, scrollPos.current + offset);
+    scrollRef.current?.scrollTo({ x: scrollPos.current, animated: true });
+    // Pause auto-scroll briefly after manual nav
+    setAutoScroll(false);
+    if (resumeTimer.current) clearTimeout(resumeTimer.current);
+    resumeTimer.current = setTimeout(() => setAutoScroll(true), 4000);
+  }
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -197,94 +220,127 @@ export default function HomeScreen() {
 
       {/* Auto-scrolling Carousel */}
       {loading ? (
-        <View style={styles.carouselLoading}>
-          <ActivityIndicator size="large" color={Colors.primary} />
-        </View>
+        <CarouselSkeleton />
       ) : carouselRecipes.length > 0 ? (
-        <ScrollView
-          ref={scrollRef}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          scrollEnabled={true}
-          style={styles.carouselStrip}
-          contentContainerStyle={styles.carouselStripContent}
-          decelerationRate="normal"
-          onTouchStart={() => {
-            setAutoScroll(false);
-            if (resumeTimer.current) clearTimeout(resumeTimer.current);
-          }}
-          onTouchEnd={() => {
-            // Small delay to read final scroll position after momentum
-            setTimeout(() => {
-              if (scrollRef.current) {
-                // @ts-ignore - access underlying DOM scrollLeft on web
-                const el = scrollRef.current as unknown as HTMLElement;
-                if (el?.scrollLeft !== undefined) {
-                  scrollPos.current = el.scrollLeft;
-                }
-              }
-            }, 500);
-            resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
-          }}
-          onScroll={(e) => {
-            if (!autoScroll) {
-              scrollPos.current = e.nativeEvent.contentOffset.x;
-            }
-          }}
-          scrollEventThrottle={100}
-        >
-          {carouselData.map((item, index) => (
+        <View style={styles.carouselContainer}>
+          {/* Left arrow */}
+          {Platform.OS === 'web' && (
             <TouchableOpacity
-              key={`${item.id}-${index}`}
-              style={[
-                styles.carouselCard,
-                { width: CARD_WIDTH, marginRight: CARD_GAP },
-                hoveredCard === index && styles.carouselCardHovered,
-              ]}
-              onPress={() => router.push(`/recipe/${item.id}`)}
-              activeOpacity={0.85}
-              {...cardHoverProps(index)}
+              style={[styles.carouselArrow, styles.carouselArrowLeft]}
+              onPress={() => scrollCarousel('left')}
+              accessibilityLabel="Previous recipes"
+              activeOpacity={0.7}
+              dataSet={{ hover: 'btn' }}
             >
-                {item.image_url ? (
-                  <LazyImage source={{ uri: item.image_url }} blurhash={item.blurhash} style={styles.carouselCardImage} contentFit="cover" accessibilityLabel={`Photo of ${item.title}`} />
-                ) : (
-                  <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
-                    <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
-                  </View>
-                )}
-                {item.family && (
-                  <View style={styles.carouselBadge}>
-                    <FamilyBadge family={item.family} size={26} />
-                  </View>
-                )}
-                {isFavorite(item.id) && (
-                  <View style={styles.carouselHeart}>
-                    <Ionicons name="heart" size={16} color={Colors.primary} />
-                  </View>
-                )}
-                <View style={[styles.carouselCardOverlay, hoveredCard === index && styles.carouselCardOverlayExpanded]}>
-                  <Text style={styles.carouselCardTitle} numberOfLines={hoveredCard === index ? 2 : 1}>{item.title}</Text>
-                  {hoveredCard === index && (
-                    <>
-                      {(item.categories?.length > 0 || item.cuisine) && (
-                        <Text style={styles.carouselCardMeta} numberOfLines={1}>
-                          {[...(item.categories ?? []), item.cuisine].filter(Boolean).join(' · ')}
-                        </Text>
-                      )}
-                      {(item.prep_time || item.cook_time) && (
-                        <Text style={styles.carouselCardMeta}>
-                          {(item.prep_time ?? 0) + (item.cook_time ?? 0)} min total
-                        </Text>
-                      )}
-                      {item.description ? (
-                        <Text style={styles.carouselCardDesc} numberOfLines={3}>{item.description}</Text>
-                      ) : null}
-                    </>
+              <Ionicons name="chevron-back" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            scrollEnabled={true}
+            style={styles.carouselStrip}
+            contentContainerStyle={styles.carouselStripContent}
+            decelerationRate="normal"
+            onTouchStart={() => {
+              setAutoScroll(false);
+              if (resumeTimer.current) clearTimeout(resumeTimer.current);
+            }}
+            onTouchEnd={() => {
+              // Small delay to read final scroll position after momentum
+              setTimeout(() => {
+                if (scrollRef.current) {
+                  // @ts-ignore - access underlying DOM scrollLeft on web
+                  const el = scrollRef.current as unknown as HTMLElement;
+                  if (el?.scrollLeft !== undefined) {
+                    scrollPos.current = el.scrollLeft;
+                  }
+                }
+              }, 500);
+              resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
+            }}
+            onScroll={(e) => {
+              if (!autoScroll) {
+                scrollPos.current = e.nativeEvent.contentOffset.x;
+              }
+            }}
+            scrollEventThrottle={100}
+          >
+            {carouselData.map((item, index) => (
+              <TouchableOpacity
+                key={`${item.id}-${index}`}
+                style={[
+                  styles.carouselCard,
+                  { width: CARD_WIDTH, marginRight: CARD_GAP },
+                  hoveredCard === index && styles.carouselCardHovered,
+                ]}
+                onPress={() => router.push(`/recipe/${item.id}`)}
+                activeOpacity={0.85}
+                {...cardHoverProps(index)}
+              >
+                  {item.image_url ? (
+                    <LazyImage source={{ uri: item.image_url }} blurhash={item.blurhash} style={styles.carouselCardImage} contentFit="cover" accessibilityLabel={`Photo of ${item.title}`} />
+                  ) : (
+                    <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
+                      <Ionicons name="restaurant-outline" size={36} color={Colors.primary} style={{ opacity: 0.5 }} />
+                      <Text style={styles.placeholderTitle} numberOfLines={2}>{item.title}</Text>
+                    </View>
                   )}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  {item.family && (
+                    <View style={styles.carouselBadge}>
+                      <FamilyBadge family={item.family} size={26} />
+                    </View>
+                  )}
+                  {isFavorite(item.id) && (
+                    <View style={styles.carouselHeart}>
+                      <Ionicons name="heart" size={16} color={Colors.primary} />
+                    </View>
+                  )}
+                  <View style={[styles.carouselCardOverlay, hoveredCard === index && styles.carouselCardOverlayExpanded]}>
+                    <Text style={styles.carouselCardTitle} numberOfLines={hoveredCard === index ? 2 : 1}>{item.title}</Text>
+                    {hoveredCard === index && (
+                      <>
+                        {(item.categories?.length > 0 || item.cuisine) && (
+                          <Text style={styles.carouselCardMeta} numberOfLines={1}>
+                            {[...(item.categories ?? []), item.cuisine].filter(Boolean).join(' · ')}
+                          </Text>
+                        )}
+                        {(item.prep_time || item.cook_time) && (
+                          <Text style={styles.carouselCardMeta}>
+                            {(item.prep_time ?? 0) + (item.cook_time ?? 0)} min total
+                          </Text>
+                        )}
+                        {item.description ? (
+                          <Text style={styles.carouselCardDesc} numberOfLines={3}>{item.description}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          {/* Right arrow */}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[styles.carouselArrow, styles.carouselArrowRight]}
+              onPress={() => scrollCarousel('right')}
+              accessibilityLabel="Next recipes"
+              activeOpacity={0.7}
+              dataSet={{ hover: 'btn' }}
+            >
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {/* Position dots on mobile */}
+          {Platform.OS !== 'web' && carouselRecipes.length > 1 && (
+            <View style={styles.dotsRow}>
+              {carouselRecipes.map((_, i) => (
+                <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+              ))}
+            </View>
+          )}
+        </View>
       ) : (
         <View style={styles.carouselPlaceholderContainer}>
           <Ionicons name="restaurant-outline" size={40} color={Colors.textSecondary} />
@@ -304,7 +360,7 @@ export default function HomeScreen() {
         <View style={styles.contentWrap}>
           <Text style={styles.introTitle}>McMichael Munchies</Text>
           <Text style={styles.introText}>
-            Your go-to place for family recipes, personal favorites, and tasty treats — all organized and easy to find. I wanted to create this to be a place where we can save and have easy access to all the amazing food we grew up with, as well as share new and amazing things we have found and created over the years. It contains recipes from the McMichaels, Knepps, Elmores, and Rosses.
+            Family recipes, personal favorites, and tasty treats from the McMichaels, Knepps, Elmores, and Rosses — all in one place.
           </Text>
           {totalCount > 0 && (
             <View style={styles.statsRow}>
@@ -337,7 +393,6 @@ export default function HomeScreen() {
                 key={fam}
                 style={styles.familyButton}
                 onPress={() => router.push({ pathname: '/browse', params: { family: fam, recipe_type: 'family_recipe' } })}
-                // @ts-ignore
                 dataSet={{ hover: 'family' }}
               >
                 <Ionicons name="people-outline" size={22} color={Colors.primary} />
@@ -348,7 +403,6 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={[styles.familyButton, styles.favoriteButton]}
               onPress={() => router.push({ pathname: '/browse', params: { recipe_type: 'personal_favorite' } })}
-              // @ts-ignore
               dataSet={{ hover: 'family' }}
             >
               <Ionicons name="bookmark-outline" size={22} color={Colors.primary} />
@@ -369,7 +423,6 @@ export default function HomeScreen() {
                 key={cat.label}
                 style={styles.categoryChip}
                 onPress={() => router.push({ pathname: '/browse', params: { category: cat.label } })}
-                // @ts-ignore
                 dataSet={{ hover: 'catChip' }}
               >
                 <Ionicons name={cat.icon} size={16} color={Colors.primary} />
@@ -381,7 +434,14 @@ export default function HomeScreen() {
       </View>
 
       {/* Recent Recipes */}
-      {recentRecipes.length > 0 && (
+      {loading ? (
+        <View style={styles.section}>
+          <View style={styles.contentWrap}>
+            <Text style={styles.sectionTitle}>Recently Added</Text>
+            <HomeGridSkeleton />
+          </View>
+        </View>
+      ) : recentRecipes.length > 0 ? (
         <View style={styles.section}>
           <View style={styles.contentWrap}>
             <Text style={styles.sectionTitle}>Recently Added</Text>
@@ -391,7 +451,6 @@ export default function HomeScreen() {
                   key={recipe.id}
                   style={styles.recipeCard}
                   onPress={() => router.push(`/recipe/${recipe.id}`)}
-                  // @ts-ignore
                   dataSet={{ hover: 'card' }}
                 >
                   <View>
@@ -399,7 +458,8 @@ export default function HomeScreen() {
                       <LazyImage source={{ uri: recipe.image_url }} blurhash={recipe.blurhash} style={styles.recipeCardImage} contentFit="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
                     ) : (
                       <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
-                        <Ionicons name="restaurant-outline" size={28} color={Colors.textSecondary} />
+                        <Ionicons name="restaurant-outline" size={32} color={Colors.primary} style={{ opacity: 0.4 }} />
+                        <Text style={styles.gridPlaceholderTitle} numberOfLines={1}>{recipe.title}</Text>
                       </View>
                     )}
                     {isFavorite(recipe.id) && (
@@ -423,7 +483,6 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => router.push('/browse')}
-              // @ts-ignore
               dataSet={{ hover: 'btn' }}
             >
               <Text style={styles.viewAllText}>View All Recipes</Text>
@@ -431,7 +490,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ) : null}
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
@@ -459,18 +518,6 @@ const styles = StyleSheet.create({
   },
   logo: { height: 52, width: 180 },
   addButton: { padding: 4 },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 10,
-    height: 42,
-  },
-  searchIcon: { marginRight: 6 },
-  searchInput: { flex: 1, fontSize: 15, color: Colors.text },
   webSearchContainer: {
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -479,14 +526,31 @@ const styles = StyleSheet.create({
   webSearchRow: { maxWidth: Layout.maxWidth, width: '100%' },
 
   // Carousel
-  carouselLoading: {
-    height: 220,
-    backgroundColor: Colors.overlayDark,
-    alignItems: 'center',
-    justifyContent: 'center',
+  carouselContainer: {
+    position: 'relative',
+    maxWidth: Layout.maxWidth,
+    alignSelf: 'center',
+    width: '100%',
     marginTop: 12,
   },
-  carouselStrip: { marginTop: 12 },
+  carouselArrow: {
+    position: 'absolute',
+    top: '50%',
+    marginTop: -18,
+    zIndex: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselArrowLeft: { left: 4 },
+  carouselArrowRight: { right: 4 },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.border },
+  dotActive: { backgroundColor: Colors.primary, width: 18 },
+  carouselStrip: {},
   carouselStripContent: { paddingHorizontal: 16 },
   carouselCard: {
     height: 220,
@@ -508,6 +572,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
+  },
+  placeholderTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.primary,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    opacity: 0.7,
   },
   carouselCardOverlay: {
     position: 'absolute',
@@ -683,6 +756,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+  },
+  gridPlaceholderTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.primary,
+    opacity: 0.6,
+    paddingHorizontal: 8,
+    textAlign: 'center',
   },
   recipeCardInfo: { padding: 10 },
   recipeCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

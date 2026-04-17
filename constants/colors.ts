@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const Colors = {
   primary: '#c47c30',          // warm amber — used for buttons, accents, active states
   primaryLight: '#e8a55a',
@@ -21,4 +23,5 @@ export const Colors = {
 
 export const Layout = {
   maxWidth: 960,
+  headerTop: Platform.OS === 'web' ? 16 : 60,
 };

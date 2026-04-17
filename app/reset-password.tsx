@@ -77,7 +77,6 @@ export default function ResetPasswordScreen() {
               supabase.auth.signOut();
               router.replace('/(tabs)/profile');
             }}
-            // @ts-ignore
             dataSet={{ hover: 'btn' }}
           >
             <Text style={styles.btnText}>Go to Sign In</Text>
@@ -98,7 +97,6 @@ export default function ResetPasswordScreen() {
           <TouchableOpacity
             style={styles.btn}
             onPress={() => router.replace('/forgot-password')}
-            // @ts-ignore
             dataSet={{ hover: 'btn' }}
           >
             <Text style={styles.btnText}>Request New Link</Text>
@@ -141,7 +139,6 @@ export default function ResetPasswordScreen() {
           style={[styles.btn, (!password || !confirm) && styles.btnDisabled]}
           onPress={handleReset}
           disabled={submitting || !password || !confirm}
-          // @ts-ignore
           dataSet={{ hover: 'btn' }}
         >
           {submitting ? (

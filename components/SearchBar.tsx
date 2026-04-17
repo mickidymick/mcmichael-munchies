@@ -84,16 +84,26 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
   const inputRef = useRef<View>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
-  useEffect(() => {
-    loadSuggestions().then(setAllSuggestions);
-  }, []);
+  const suggestionsLoaded = useRef(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  function ensureSuggestions() {
+    if (suggestionsLoaded.current) return;
+    suggestionsLoaded.current = true;
+    setSuggestionsLoading(true);
+    loadSuggestions().then(setAllSuggestions).finally(() => setSuggestionsLoading(false));
+  }
 
   const query = value.trim().toLowerCase();
   const filtered = query.length >= 2
     ? allSuggestions.filter((s) => s.label.toLowerCase().includes(query)).slice(0, 8)
     : [];
 
-  const showDropdown = focused && filtered.length > 0;
+  const [highlightIndex, setHighlightIndex] = useState(-1);
+  const showLoading = focused && suggestionsLoading && query.length >= 2;
+  const showDropdown = focused && filtered.length > 0 && !suggestionsLoading;
+
+  // Reset highlight when filtered results change
+  useEffect(() => { setHighlightIndex(-1); }, [filtered.length]);
 
   // Measure input position for portal dropdown
   const measureInput = useCallback(() => {
@@ -147,6 +157,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           padding: '10px 12px',
           borderBottom: i < filtered.length - 1 ? `1px solid ${Colors.border}` : 'none',
           cursor: 'pointer',
+          backgroundColor: i === highlightIndex ? Colors.secondary : 'transparent',
         },
         onMouseDown: (e: any) => {
           e.preventDefault();
@@ -170,9 +181,31 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           placeholderTextColor={Colors.textSecondary}
           value={value}
           onChangeText={onChangeText}
-          onFocus={() => { setFocused(true); measureInput(); }}
+          onFocus={() => { setFocused(true); ensureSuggestions(); measureInput(); }}
           onBlur={() => { blurTimeout.current = setTimeout(() => setFocused(false), 200); }}
-          onSubmitEditing={onSubmit}
+          onKeyPress={(e: any) => {
+            if (!showDropdown) return;
+            const key = e.nativeEvent?.key ?? e.key;
+            if (key === 'ArrowDown') {
+              e.preventDefault?.();
+              setHighlightIndex((prev) => (prev + 1) % filtered.length);
+            } else if (key === 'ArrowUp') {
+              e.preventDefault?.();
+              setHighlightIndex((prev) => (prev <= 0 ? filtered.length - 1 : prev - 1));
+            } else if (key === 'Enter' && highlightIndex >= 0) {
+              e.preventDefault?.();
+              handleSelect(filtered[highlightIndex]);
+            } else if (key === 'Escape') {
+              setFocused(false);
+            }
+          }}
+          onSubmitEditing={() => {
+            if (showDropdown && highlightIndex >= 0) {
+              handleSelect(filtered[highlightIndex]);
+            } else {
+              onSubmit?.();
+            }
+          }}
           returnKeyType="search"
           accessibilityLabel="Search recipes"
           accessibilityRole="search"
@@ -183,6 +216,28 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           </TouchableOpacity>
         )}
       </View>
+      {Platform.OS === 'web' && showLoading && dropdownPos
+        ? createPortal(
+            createElement('div', {
+              style: {
+                position: 'fixed' as const,
+                top: dropdownPos.top,
+                left: dropdownPos.left,
+                width: dropdownPos.width,
+                zIndex: 99999,
+                backgroundColor: '#fff',
+                border: `1px solid ${Colors.border}`,
+                borderRadius: 10,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                padding: '12px',
+                textAlign: 'center',
+                fontSize: 13,
+                color: Colors.textSecondary,
+              },
+            }, 'Loading suggestions...'),
+            document.body
+          )
+        : null}
       {Platform.OS === 'web' && dropdownContent
         ? createPortal(dropdownContent, document.body)
         : null}

@@ -401,7 +401,8 @@ export default function EditRecipeScreen() {
       .filter((s) => s.instruction.trim())
       .map((s, i) => ({ ...s, order: i + 1 }));
 
-    const calories = await estimateCalories(cleanIngredients);
+    let calories: number | null = null;
+    try { calories = await estimateCalories(cleanIngredients); } catch { /* skip if USDA API fails */ }
 
     const { error } = await supabase.from('recipes').update({
       title: title.trim(),
@@ -522,7 +523,6 @@ export default function EditRecipeScreen() {
         <Text style={styles.label}>Categories</Text>
         <View style={styles.chipWrap}>
           {CATEGORIES.map((c) => (
-            // @ts-ignore dataSet for web hover
             <TouchableOpacity key={c} style={[styles.chip, categories.includes(c) && styles.chipActive]} onPress={() => toggleCategory(c)} dataSet={{ hover: 'chip' }}>
               <Text style={[styles.chipText, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
@@ -554,7 +554,6 @@ export default function EditRecipeScreen() {
         </Text>
         <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
-            // @ts-ignore dataSet for web hover
             <TouchableOpacity key={f} style={[styles.chip, family === f && styles.chipActive]} onPress={() => setFamily(family === f ? '' : f)} dataSet={{ hover: 'chip' }}>
               <Text style={[styles.chipText, family === f && styles.chipTextActive]}>{f}</Text>
             </TouchableOpacity>
@@ -564,7 +563,6 @@ export default function EditRecipeScreen() {
         <Text style={styles.label}>Cuisine</Text>
         <View style={styles.chipWrap}>
           {CUISINES.map((c) => (
-            // @ts-ignore dataSet for web hover
             <TouchableOpacity key={c} style={[styles.chip, cuisine === c && styles.chipActive]} onPress={() => setCuisine(c)} dataSet={{ hover: 'chip' }}>
               <Text style={[styles.chipText, cuisine === c && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>

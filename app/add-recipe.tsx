@@ -391,7 +391,8 @@ export default function AddRecipeScreen() {
       .filter((s) => s.instruction.trim())
       .map((s, i) => ({ ...s, order: i + 1 }));
 
-    const calories = await estimateCalories(cleanIngredients);
+    let calories: number | null = null;
+    try { calories = await estimateCalories(cleanIngredients); } catch { /* skip if USDA API fails */ }
 
     const { data, error } = await supabase.from('recipes').insert({
       title: title.trim(),
@@ -530,7 +531,6 @@ export default function AddRecipeScreen() {
               key={c}
               style={[styles.chip, categories.includes(c) && styles.chipActive]}
               onPress={() => toggleCategory(c)}
-              // @ts-ignore
               dataSet={{ hover: 'chip' }}
             >
               <Text style={[styles.chipText, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
@@ -543,7 +543,6 @@ export default function AddRecipeScreen() {
         <View style={styles.chipWrap}>
           <TouchableOpacity
             style={[styles.chip, recipeType === 'family_recipe' && styles.chipActive]}
-            // @ts-ignore
             dataSet={{ hover: 'chip' }}
             onPress={() => setRecipeType('family_recipe')}
           >
@@ -551,7 +550,6 @@ export default function AddRecipeScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.chip, recipeType === 'personal_favorite' && styles.chipActive]}
-            // @ts-ignore
             dataSet={{ hover: 'chip' }}
             onPress={() => setRecipeType('personal_favorite')}
           >
@@ -568,7 +566,6 @@ export default function AddRecipeScreen() {
             <TouchableOpacity
               key={f}
               style={[styles.chip, family === f && styles.chipActive]}
-              // @ts-ignore
               dataSet={{ hover: 'chip' }}
               onPress={() => setFamily(family === f ? '' : f)}
             >
@@ -585,7 +582,6 @@ export default function AddRecipeScreen() {
               key={c}
               style={[styles.chip, cuisine === c && styles.chipActive]}
               onPress={() => setCuisine(c)}
-              // @ts-ignore
               dataSet={{ hover: 'chip' }}
             >
               <Text style={[styles.chipText, cuisine === c && styles.chipTextActive]}>{c}</Text>

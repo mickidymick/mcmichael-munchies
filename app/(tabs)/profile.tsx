@@ -15,11 +15,11 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useRouter } from 'expo-router';
-import { Colors } from '../../constants/colors';
+import { Colors, Layout } from '../../constants/colors';
 import { supabase } from '../../lib/supabase';
 import { useUserRole } from '../../lib/useUserRole';
 
-const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
+const HEADER_TOP = Layout.headerTop;
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,6 +51,8 @@ export default function ProfileScreen() {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
@@ -71,21 +73,23 @@ export default function ProfileScreen() {
   }, []);
 
   async function refreshStats() {
-    const { data: { user: currentUser } } = await supabase.auth.getUser();
-    if (!currentUser) return;
-    const [recipesRes, favoritesRes, reviewRes, pendingRes, requestRes] = await Promise.all([
-      supabase.from('recipes').select('id', { count: 'exact', head: true }).eq('created_by', currentUser.id),
-      supabase.from('favorites').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
-      supabase.from('review_queue').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
-      supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('access_requests').select('status').eq('user_id', currentUser.id).in('status', ['pending', 'denied']).order('created_at', { ascending: false }).limit(1).maybeSingle(),
-    ]);
-    if (recipesRes.count !== null) setRecipesAdded(recipesRes.count);
-    if (favoritesRes.count !== null) setFavoritesCount(favoritesRes.count);
-    if (reviewRes.count !== null) setReviewCount(reviewRes.count);
-    if (pendingRes.count !== null) setPendingRequestCount(pendingRes.count);
-    if (requestRes.data) setRequestStatus(requestRes.data.status as 'pending' | 'denied');
-    else setRequestStatus('none');
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+      const [recipesRes, favoritesRes, reviewRes, pendingRes, requestRes] = await Promise.all([
+        supabase.from('recipes').select('id', { count: 'exact', head: true }).eq('created_by', currentUser.id),
+        supabase.from('favorites').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+        supabase.from('review_queue').select('id', { count: 'exact', head: true }).eq('user_id', currentUser.id),
+        supabase.from('access_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('access_requests').select('status').eq('user_id', currentUser.id).in('status', ['pending', 'denied']).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      if (recipesRes.count !== null) setRecipesAdded(recipesRes.count);
+      if (favoritesRes.count !== null) setFavoritesCount(favoritesRes.count);
+      if (reviewRes.count !== null) setReviewCount(reviewRes.count);
+      if (pendingRes.count !== null) setPendingRequestCount(pendingRes.count);
+      if (requestRes.data) setRequestStatus(requestRes.data.status as 'pending' | 'denied');
+      else setRequestStatus('none');
+    } catch { /* silently keep stale stats on network error */ }
   }
 
   // Reload stats and role every time profile tab gets focus
@@ -189,7 +193,7 @@ export default function ProfileScreen() {
     const memberSince = user.created_at ? formatDate(user.created_at) : null;
 
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.heading}>Profile</Text>
         </View>
@@ -257,7 +261,6 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.requestBanner}
               onPress={() => setShowRequestForm(true)}
-              // @ts-ignore
               dataSet={{ hover: 'family' }}
             >
               <Ionicons name="lock-open-outline" size={18} color={Colors.primary} />
@@ -272,7 +275,6 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.statCard}
             onPress={() => router.push('/(tabs)/browse')}
-            // @ts-ignore
             dataSet={{ hover: 'card' }}
           >
             <Ionicons name="book-outline" size={24} color={Colors.primary} />
@@ -282,7 +284,6 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.statCard}
             onPress={() => router.push('/(tabs)/favorites')}
-            // @ts-ignore
             dataSet={{ hover: 'card' }}
           >
             <Ionicons name="heart-outline" size={24} color={Colors.primary} />
@@ -300,7 +301,6 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.actionRow}
                 onPress={() => router.push('/add-recipe')}
-                // @ts-ignore
                 dataSet={{ hover: 'family' }}
               >
                 <View style={styles.actionIcon}>
@@ -316,7 +316,6 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.actionRow}
                 onPress={() => router.push('/auto-import')}
-                // @ts-ignore
                 dataSet={{ hover: 'family' }}
               >
                 <View style={styles.actionIcon}>
@@ -333,7 +332,6 @@ export default function ProfileScreen() {
                 <TouchableOpacity
                   style={styles.actionRow}
                   onPress={() => router.push('/review-queue')}
-                  // @ts-ignore
                   dataSet={{ hover: 'family' }}
                 >
                   <View style={[styles.actionIcon, { backgroundColor: Colors.primary }]}>
@@ -355,7 +353,6 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.actionRow}
             onPress={() => router.push('/(tabs)/browse')}
-            // @ts-ignore
             dataSet={{ hover: 'family' }}
           >
             <View style={styles.actionIcon}>
@@ -371,7 +368,6 @@ export default function ProfileScreen() {
           <TouchableOpacity
             style={styles.actionRow}
             onPress={() => router.push('/(tabs)/favorites')}
-            // @ts-ignore
             dataSet={{ hover: 'family' }}
           >
             <View style={styles.actionIcon}>
@@ -389,7 +385,6 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.actionRow}
               onPress={() => router.push('/admin')}
-              // @ts-ignore
               dataSet={{ hover: 'family' }}
             >
               <View style={styles.actionIcon}>
@@ -405,7 +400,6 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.actionRow}
               onPress={() => router.push('/pending-requests')}
-              // @ts-ignore
               dataSet={{ hover: 'family' }}
             >
               <View style={[styles.actionIcon, pendingRequestCount > 0 && { backgroundColor: Colors.primary }]}>
@@ -434,12 +428,15 @@ export default function ProfileScreen() {
         <TouchableOpacity
           style={styles.logoutButton}
           onPress={handleLogout}
-          // @ts-ignore
           dataSet={{ hover: 'btn' }}
         >
           <Ionicons name="log-out-outline" size={18} color={Colors.textSecondary} />
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+        </View>
       </ScrollView>
     );
   }
@@ -506,7 +503,6 @@ export default function ProfileScreen() {
           style={styles.button}
           onPress={mode === 'login' ? handleLogin : handleSignup}
           disabled={submitting}
-          // @ts-ignore
           dataSet={{ hover: 'btn' }}
         >
           {submitting ? (
@@ -538,7 +534,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  scrollContent: { paddingBottom: 40 },
+  scrollContent: { paddingBottom: 0, maxWidth: Layout.maxWidth, width: '100%', alignSelf: 'center' },
   loader: { flex: 1 },
   header: {
     paddingTop: HEADER_TOP,
@@ -713,6 +709,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   logoutText: { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
+  footer: { alignItems: 'center', paddingVertical: 24, marginTop: 24, backgroundColor: Colors.footer },
+  footerText: { fontSize: 12, color: Colors.textSecondary },
 
   // Auth
   authContainer: { flexGrow: 1, justifyContent: 'center', padding: 28, gap: 12, maxWidth: 420, width: '100%', alignSelf: 'center' },

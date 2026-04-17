@@ -24,14 +24,46 @@ function useAuthRedirects() {
 function useWebMeta() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    // Apple touch icon
-    const link = document.createElement('link');
-    link.rel = 'apple-touch-icon';
-    link.href = '/apple-touch-icon.png';
-    document.head.appendChild(link);
+    const elements: HTMLElement[] = [];
+
+    function addMeta(name: string, content: string) {
+      // Don't duplicate if already present
+      if (document.querySelector(`meta[property="${name}"], meta[name="${name}"]`)) return;
+      const meta = document.createElement('meta');
+      if (name.startsWith('og:')) {
+        meta.setAttribute('property', name);
+      } else {
+        meta.setAttribute('name', name);
+      }
+      meta.content = content;
+      document.head.appendChild(meta);
+      elements.push(meta);
+    }
+
+    function addLink(rel: string, href: string, type?: string) {
+      const link = document.createElement('link');
+      link.rel = rel;
+      link.href = href;
+      if (type) link.type = type;
+      document.head.appendChild(link);
+      elements.push(link);
+    }
+
     // Page title
     document.title = 'McMichael Munchies';
-    return () => { document.head.removeChild(link); };
+
+    // Favicon & icons
+    addLink('icon', '/logo.png', 'image/png');
+    addLink('apple-touch-icon', '/apple-touch-icon.png');
+
+    // Default OG tags (recipe detail pages override title/description dynamically)
+    addMeta('description', 'Family recipes from the McMichaels, Knepps, Elmores, and Rosses.');
+    addMeta('og:title', 'McMichael Munchies');
+    addMeta('og:description', 'Family recipes from the McMichaels, Knepps, Elmores, and Rosses.');
+    addMeta('og:type', 'website');
+    addMeta('og:image', '/logo.png');
+
+    return () => { elements.forEach((el) => el.remove()); };
   }, []);
 }
 
@@ -40,20 +72,22 @@ function useWebHoverStyles() {
     if (Platform.OS !== 'web') return;
     const style = document.createElement('style');
     style.textContent = `
-      [data-hover="card"] { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
-      [data-hover="card"]:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-color: #c47c30 !important; }
-      [data-hover="chip"] { transition: transform 0.1s ease, background-color 0.15s ease; }
-      [data-hover="chip"]:hover { transform: scale(1.06); filter: brightness(0.95); }
-      [data-hover="btn"] { transition: transform 0.1s ease, opacity 0.15s ease; }
-      [data-hover="btn"]:hover { transform: scale(1.05); opacity: 0.85; }
-      [data-hover="icon"] { transition: transform 0.15s ease; }
-      [data-hover="icon"]:hover { transform: scale(1.2); }
-      [data-hover="nav"] { transition: background-color 0.15s ease; }
-      [data-hover="nav"]:hover { background-color: ${Colors.secondary}; }
-      [data-hover="family"] { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
-      [data-hover="family"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-color: #c47c30 !important; }
-      [data-hover="catChip"] { transition: transform 0.1s ease, box-shadow 0.1s ease; }
-      [data-hover="catChip"]:hover { transform: scale(1.08); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+      @media (hover: hover) {
+        [data-hover="card"] { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+        [data-hover="card"]:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); border-color: #c47c30 !important; }
+        [data-hover="chip"] { transition: transform 0.1s ease, background-color 0.15s ease; }
+        [data-hover="chip"]:hover { transform: scale(1.06); filter: brightness(0.95); }
+        [data-hover="btn"] { transition: transform 0.1s ease, opacity 0.15s ease; }
+        [data-hover="btn"]:hover { transform: scale(1.05); opacity: 0.85; }
+        [data-hover="icon"] { transition: transform 0.15s ease; }
+        [data-hover="icon"]:hover { transform: scale(1.2); }
+        [data-hover="nav"] { transition: background-color 0.15s ease; }
+        [data-hover="nav"]:hover { background-color: ${Colors.secondary}; }
+        [data-hover="family"] { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+        [data-hover="family"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-color: #c47c30 !important; }
+        [data-hover="catChip"] { transition: transform 0.1s ease, box-shadow 0.1s ease; }
+        [data-hover="catChip"]:hover { transform: scale(1.08); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+      }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
@@ -75,10 +109,11 @@ export default function RootLayout() {
       {Platform.OS === 'web' && <NavBar />}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="+not-found" options={{ headerShown: false }} />
         <Stack.Screen
           name="recipe/[id]"
           options={{
-            headerShown: true,
+            headerShown: Platform.OS !== 'web',
             headerBackTitle: 'Back',
             headerTitle: '',
             headerStyle: { backgroundColor: Colors.background },

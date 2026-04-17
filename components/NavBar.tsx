@@ -56,7 +56,6 @@ export default function NavBar() {
                 accessibilityRole="link"
                 accessibilityLabel={link.label}
                 accessibilityState={{ selected: isActive }}
-                // @ts-ignore
                 dataSet={{ hover: 'nav' }}
               >
                 {isCompact ? (
@@ -105,7 +104,6 @@ export default function NavBar() {
               <TouchableOpacity
                 style={styles.bulkBtn}
                 onPress={() => router.push('/auto-import')}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 <Ionicons name="documents-outline" size={16} color={Colors.primary} />
@@ -114,7 +112,6 @@ export default function NavBar() {
               <TouchableOpacity
                 style={styles.addBtn}
                 onPress={() => router.push('/add-recipe')}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 <Ionicons name="add" size={18} color="#fff" />

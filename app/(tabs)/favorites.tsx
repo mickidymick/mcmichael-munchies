@@ -4,7 +4,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -12,17 +11,19 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Colors } from '../../constants/colors';
+import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 
 const FAVORITES_CACHE_KEY = 'favorites_cache_v1';
 import RecipeCard from '../../components/RecipeCard';
+import { RecipeCardSkeleton } from '../../components/Skeleton';
+import EmptyState from '../../components/EmptyState';
 import SearchBar from '../../components/SearchBar';
 import ChipRow from '../../components/ChipRow';
 import { SORT_OPTIONS, FAMILIES, CATEGORIES, CUISINES } from '../../constants/recipes';
 import { toggleMulti } from '../../lib/utils';
 
-const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
+const HEADER_TOP = Layout.headerTop;
 
 export default function FavoritesScreen() {
   const router = useRouter();
@@ -37,6 +38,7 @@ export default function FavoritesScreen() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [error, setError] = useState(false);
+  const [staleWarning, setStaleWarning] = useState(false);
   const hasCachedData = useRef(false);
 
   // Restore cache on mount
@@ -58,6 +60,7 @@ export default function FavoritesScreen() {
 
   const loadFavorites = useCallback(async () => {
     setError(false);
+    setStaleWarning(false);
     if (!hasCachedData.current) setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -87,7 +90,12 @@ export default function FavoritesScreen() {
         loggedIn: true,
       })).catch(() => { /* ignore */ });
     } catch {
-      setError(true);
+      // Show stale warning if we have cached data, full error if not
+      if (hasCachedData.current) {
+        setStaleWarning(true);
+      } else {
+        setError(true);
+      }
     }
     setLoading(false);
   }, []);
@@ -132,8 +140,8 @@ export default function FavoritesScreen() {
 
     results.sort((a, b) => {
       switch (selectedSort) {
-        case 'newest': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        case 'oldest': return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'newest': return (b.created_at ?? '').localeCompare(a.created_at ?? '');
+        case 'oldest': return (a.created_at ?? '').localeCompare(b.created_at ?? '');
         default: return a.title.localeCompare(b.title);
       }
     });
@@ -142,37 +150,48 @@ export default function FavoritesScreen() {
   }, [allFavorites, query, selectedFamilies, selectedCategories, selectedCuisines, selectedSort]);
 
   if (loading) {
-    return <ActivityIndicator style={styles.loader} color={Colors.primary} />;
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.heading}>Favorites</Text>
+          </View>
+        </View>
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3].map((i) => <RecipeCardSkeleton key={i} />)}
+        </View>
+      </View>
+    );
   }
 
   if (error) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
-        <Text style={styles.emptyText}>Failed to load favorites.</Text>
-        <TouchableOpacity onPress={loadFavorites}>
-          <Text style={styles.emptyLink}>Try again</Text>
-        </TouchableOpacity>
-      </View>
+      <EmptyState
+        icon="alert-circle-outline"
+        title="Connection error"
+        description="Failed to load favorites."
+        actionLabel="Try again"
+        onAction={loadFavorites}
+      />
     );
   }
 
   if (!loggedIn) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="heart-outline" size={48} color={Colors.textSecondary} />
-        <Text style={styles.emptyTitle}>Favorites</Text>
-        <Text style={styles.emptyText}>Sign in to save your favorite recipes.</Text>
-        <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/profile')}>
-          <Text style={styles.emptyBtnText}>Sign In</Text>
-        </TouchableOpacity>
-      </View>
+      <EmptyState
+        icon="heart-outline"
+        title="Favorites"
+        description="Sign in to save your favorite recipes."
+        actionLabel="Sign In"
+        onAction={() => router.push('/profile')}
+      />
     );
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerContent}>
         <Text style={styles.heading}>Favorites</Text>
         <SearchBar
           value={query}
@@ -194,7 +213,6 @@ export default function FavoritesScreen() {
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
-                // @ts-ignore
                 dataSet={{ hover: 'chip' }}
                 onPress={() => setSelectedSort(opt.value)}
               >
@@ -226,20 +244,40 @@ export default function FavoritesScreen() {
             )}
           </View>
         )}
+        </View>
       </View>
 
+      {staleWarning && (
+        <TouchableOpacity style={styles.staleBanner} onPress={loadFavorites}>
+          <Ionicons name="cloud-offline-outline" size={16} color={Colors.primary} />
+          <Text style={styles.staleBannerText}>Showing cached data. Tap to retry.</Text>
+        </TouchableOpacity>
+      )}
+
       {filtered.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="heart-outline" size={48} color={Colors.textSecondary} />
-          <Text style={styles.emptyText}>
-            {allFavorites.length === 0 ? 'No favorites yet.' : 'No favorites match your filters.'}
-          </Text>
-          {allFavorites.length === 0 && (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/browse')}>
-              <Text style={styles.emptyLink}>Browse recipes</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        allFavorites.length === 0 ? (
+          <EmptyState
+            icon="heart-outline"
+            title="No favorites yet"
+            description="Tap the heart on any recipe to save it here for quick access."
+            actionLabel="Browse Recipes"
+            actionIcon="search-outline"
+            onAction={() => router.push('/(tabs)/browse')}
+          />
+        ) : (
+          <EmptyState
+            icon="heart-outline"
+            title="No matches"
+            description="No favorites match your current filters."
+            actionLabel="Clear all filters"
+            onAction={() => {
+              setSelectedFamilies([]);
+              setSelectedCategories([]);
+              setSelectedCuisines([]);
+              setQuery('');
+            }}
+          />
+        )
       ) : (
         <FlatList
           data={filtered}
@@ -247,6 +285,11 @@ export default function FavoritesScreen() {
           contentContainerStyle={styles.list}
           ListHeaderComponent={
             <Text style={styles.resultCount}>{filtered.length} favorite{filtered.length !== 1 ? 's' : ''}</Text>
+          }
+          ListFooterComponent={
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+            </View>
           }
           renderItem={({ item }) => <RecipeCard recipe={item} isFavorited />}
         />
@@ -257,7 +300,7 @@ export default function FavoritesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  loader: { flex: 1 },
+  skeletonList: { padding: 16, gap: 12 },
   header: {
     paddingTop: HEADER_TOP,
     paddingBottom: 8,
@@ -266,7 +309,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     paddingHorizontal: 16,
     zIndex: 100,
+    alignItems: 'center',
   },
+  headerContent: { maxWidth: Layout.maxWidth, width: '100%' },
   heading: {
     fontSize: 22,
     fontWeight: '700',
@@ -314,15 +359,34 @@ const styles = StyleSheet.create({
   clearButtonText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   resultCount: { fontSize: 13, color: Colors.textSecondary, marginBottom: 8 },
   list: { padding: 16, gap: 12 },
+  staleBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: Colors.secondary,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
+    borderRadius: 8,
+  },
+  staleBannerText: { fontSize: 13, color: Colors.primary, fontWeight: '500' },
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 20 },
   emptyTitle: { fontSize: 22, fontWeight: '700', color: Colors.text },
-  emptyText: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center' },
+  emptyText: { fontSize: 15, color: Colors.textSecondary, textAlign: 'center', maxWidth: 300 },
   emptyLink: { fontSize: 15, color: Colors.primary, fontWeight: '600' },
   emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: Colors.primary,
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 8,
+    marginTop: 4,
   },
   emptyBtnText: { color: '#FFF', fontWeight: '700', fontSize: 15 },
+  footer: { alignItems: 'center', paddingVertical: 24, backgroundColor: Colors.footer },
+  footerText: { fontSize: 12, color: Colors.textSecondary },
 });

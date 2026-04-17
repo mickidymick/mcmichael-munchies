@@ -191,3 +191,40 @@ ALTER TABLE recipes ADD CONSTRAINT recipes_recipe_type_check
 -- created_by: tracks which user submitted the recipe (distinct from `family`
 -- which reflects whose recipe it is). Populated on insert by the client.
 ALTER TABLE recipes ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+
+-- ============================================
+-- Storage: recipe-images bucket policies
+-- The bucket is public (images served via public URL), so we only need:
+--   INSERT for members to upload
+--   UPDATE for members to replace images
+--   DELETE for members to remove images
+-- We explicitly do NOT grant SELECT on storage.objects — public buckets
+-- serve files by direct URL and don't need a SELECT policy. A broad SELECT
+-- policy would let any client list all files in the bucket.
+-- ============================================
+
+-- Remove overly broad SELECT policy if it exists
+DROP POLICY IF EXISTS "Public read access" ON storage.objects;
+DROP POLICY IF EXISTS "Give users access to own folder" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read" ON storage.objects;
+
+-- Members can upload images
+CREATE POLICY "Members can upload recipe images"
+  ON storage.objects FOR INSERT WITH CHECK (
+    bucket_id = 'recipe-images'
+    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('member', 'admin')
+  );
+
+-- Members can update (replace) images
+CREATE POLICY "Members can update recipe images"
+  ON storage.objects FOR UPDATE USING (
+    bucket_id = 'recipe-images'
+    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('member', 'admin')
+  );
+
+-- Members can delete images
+CREATE POLICY "Members can delete recipe images"
+  ON storage.objects FOR DELETE USING (
+    bucket_id = 'recipe-images'
+    AND (SELECT role FROM profiles WHERE id = auth.uid()) IN ('member', 'admin')
+  );

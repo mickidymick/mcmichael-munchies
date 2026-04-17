@@ -156,7 +156,6 @@ export default function PendingRequestsScreen() {
                 style={styles.denyBtn}
                 onPress={() => handleRequest(item.id, item.user_id, false)}
                 disabled={processing === item.id}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 {processing === item.id ? (
@@ -172,7 +171,6 @@ export default function PendingRequestsScreen() {
                 style={styles.approveBtn}
                 onPress={() => handleRequest(item.id, item.user_id, true)}
                 disabled={processing === item.id}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 {processing === item.id ? (

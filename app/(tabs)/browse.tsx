@@ -12,12 +12,15 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
+const HEADER_TOP = Layout.headerTop;
 
-const HEADER_TOP = Platform.OS === 'web' ? 16 : 60;
 import { supabase, Recipe } from '../../lib/supabase';
+import { escapePostgrestString } from '../../lib/utils';
 
 const BROWSE_CACHE_KEY = 'browse_cache_v1';
 import RecipeCard from '../../components/RecipeCard';
+import { RecipeCardSkeleton } from '../../components/Skeleton';
+import EmptyState from '../../components/EmptyState';
 import { useUserRole } from '../../lib/useUserRole';
 import { useFavorites } from '../../lib/useFavorites';
 import SearchBar from '../../components/SearchBar';
@@ -52,6 +55,7 @@ export default function BrowseScreen() {
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const fetchId = useRef(0);
   const hasCachedData = useRef(false);
+  const initialFetchDone = useRef(false);
   const isDefaultView = !params.category && !params.query && !params.family && !params.recipe_type;
 
   // Restore cache for default view
@@ -95,13 +99,15 @@ export default function BrowseScreen() {
     setPage(0);
     setHasMore(true);
     fetchRecipes(0, true);
+    initialFetchDone.current = true;
   }, [debouncedQuery, selectedCategories, selectedFamilies, selectedRecipeTypes, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary]);
 
-  // Refresh on focus to pick up new/edited recipes
+  // Refresh on focus — only when returning to this tab, not on filter changes
   useFocusEffect(
     useCallback(() => {
+      if (!initialFetchDone.current) return;
       fetchRecipes(0, true);
-    }, [debouncedQuery, selectedCategories, selectedFamilies, selectedRecipeTypes, selectedCuisines, selectedCookTimes, selectedSort, selectedDietary])
+    }, [])
   );
 
 
@@ -144,7 +150,7 @@ export default function BrowseScreen() {
     }
     // Server-side text search on title/description
     if (debouncedQuery.trim()) {
-      const q = debouncedQuery.trim();
+      const q = escapePostgrestString(debouncedQuery.trim());
       req = req.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
     }
 
@@ -198,13 +204,13 @@ export default function BrowseScreen() {
       );
     }
 
-    // Sort
+    // Sort — use direct string comparison for ISO dates (avoids creating Date objects)
     results.sort((a, b) => {
       switch (selectedSort) {
         case 'newest':
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return (b.created_at ?? '').localeCompare(a.created_at ?? '');
         case 'oldest':
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          return (a.created_at ?? '').localeCompare(b.created_at ?? '');
         default:
           return a.title.localeCompare(b.title);
       }
@@ -243,6 +249,7 @@ export default function BrowseScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.heading}>Browse Recipes</Text>
+        <View style={styles.headerContent}>
         <SearchBar
           value={query}
           onChangeText={setQuery}
@@ -265,7 +272,6 @@ export default function BrowseScreen() {
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
-                // @ts-ignore
                 dataSet={{ hover: 'chip' }}
                 onPress={() => setSelectedSort(opt.value)}
               >
@@ -309,27 +315,31 @@ export default function BrowseScreen() {
             )}
           </View>
         )}
+        </View>
       </View>
 
       {/* Results */}
       {loading ? (
-        <ActivityIndicator style={styles.loader} color={Colors.primary} />
+        <View style={styles.skeletonList}>
+          {[0, 1, 2, 3, 4].map((i) => <RecipeCardSkeleton key={i} />)}
+        </View>
       ) : recipes.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="search-outline" size={48} color={Colors.textSecondary} />
-          <Text style={styles.emptyText}>
-            {totalInDb === 0 ? 'No recipes yet.' : 'No recipes match your filters.'}
-          </Text>
-          {totalInDb === 0 ? (
-            isMemberOrAdmin ? (
-              <TouchableOpacity onPress={() => router.push('/add-recipe')}>
-                <Text style={styles.emptyLink}>Add the first recipe</Text>
-              </TouchableOpacity>
-            ) : (
-              <Text style={styles.emptySubtext}>Recipes will appear here once members start adding them.</Text>
-            )
-          ) : (
-            <TouchableOpacity onPress={() => {
+        totalInDb === 0 ? (
+          <EmptyState
+            icon="restaurant-outline"
+            title="No recipes yet"
+            description={isMemberOrAdmin ? 'Be the first to add a recipe!' : 'Recipes will appear here once members start adding them.'}
+            actionLabel={isMemberOrAdmin ? 'Add the first recipe' : undefined}
+            actionIcon={isMemberOrAdmin ? 'add-circle-outline' : undefined}
+            onAction={isMemberOrAdmin ? () => router.push('/add-recipe') : undefined}
+          />
+        ) : (
+          <EmptyState
+            icon="search-outline"
+            title="No matches"
+            description="No recipes match your current filters."
+            actionLabel="Clear all filters"
+            onAction={() => {
               setSelectedFamilies([]);
               setSelectedRecipeTypes([]);
               setSelectedCategories([]);
@@ -337,11 +347,9 @@ export default function BrowseScreen() {
               setSelectedCookTimes([]);
               setSelectedDietary([]);
               setQuery('');
-            }}>
-              <Text style={styles.emptyLink}>Clear all filters</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            }}
+          />
+        )
       ) : (
         <FlatList
           data={recipes}
@@ -353,7 +361,12 @@ export default function BrowseScreen() {
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
-            loadingMore ? <ActivityIndicator style={{ paddingVertical: 16 }} color={Colors.primary} /> : null
+            <>
+              {loadingMore && <ActivityIndicator style={{ paddingVertical: 16 }} color={Colors.primary} />}
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+              </View>
+            </>
           }
           renderItem={({ item }) => <RecipeCard recipe={item} isFavorited={isFavorite(item.id)} />}
         />
@@ -372,12 +385,15 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     paddingHorizontal: 16,
     zIndex: 100,
+    alignItems: 'center',
   },
   heading: {
     fontSize: 22,
     fontWeight: '700',
     color: Colors.text,
     marginBottom: 10,
+    maxWidth: Layout.maxWidth,
+    width: '100%',
   },
   headerControls: {
     flexDirection: 'row',
@@ -421,8 +437,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  headerContent: { maxWidth: Layout.maxWidth, width: '100%' },
   clearButtonText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  loader: { flex: 1, marginTop: 60 },
+  skeletonList: { padding: 16, gap: 12 },
+  footer: { alignItems: 'center', paddingVertical: 24, backgroundColor: Colors.footer },
+  footerText: { fontSize: 12, color: Colors.textSecondary },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyText: { fontSize: 16, color: Colors.textSecondary },
   emptyLink: { fontSize: 15, color: Colors.primary, fontWeight: '600' },

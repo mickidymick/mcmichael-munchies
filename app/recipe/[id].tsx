@@ -13,10 +13,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../../constants/colors';
+import { Share } from 'react-native';
+import { Colors, Layout } from '../../constants/colors';
 import { supabase, Recipe } from '../../lib/supabase';
 import FamilyBadge from '../../components/FamilyBadge';
 import Tooltip from '../../components/Tooltip';
+import Skeleton from '../../components/Skeleton';
 import { useUserRole } from '../../lib/useUserRole';
 
 export default function RecipeDetailScreen() {
@@ -37,8 +39,30 @@ export default function RecipeDetailScreen() {
 
   useEffect(() => {
     loadRecipe();
-    checkFavorite();
   }, [id]);
+
+  // Update page title and OG meta on web when recipe loads
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !recipe) return;
+    const title = `${recipe.title} — McMichael Munchies`;
+    document.title = title;
+
+    function setMeta(attr: string, name: string, content: string) {
+      let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.content = content;
+    }
+
+    setMeta('property', 'og:title', recipe.title);
+    setMeta('property', 'og:description', recipe.description || `A recipe from McMichael Munchies`);
+    if (recipe.image_url) setMeta('property', 'og:image', recipe.image_url);
+
+    return () => { document.title = 'McMichael Munchies'; };
+  }, [recipe]);
 
   // Refresh recipe data when screen regains focus (e.g. after editing)
   useFocusEffect(
@@ -47,35 +71,42 @@ export default function RecipeDetailScreen() {
     }, [id])
   );
 
+  const recipeColumns = 'id,title,description,image_url,blurhash,family,recipe_type,categories,cuisine,prep_time,cook_time,servings,estimated_calories,tags,ingredients,steps,notes,is_ai_generated,is_stock_image,created_by,created_at';
+
   async function loadRecipe() {
     setError(false);
-    const { data, error: err } = await supabase.from('recipes').select('*').eq('id', id).single();
-    if (err) { setError(true); setLoading(false); return; }
+    // Fetch recipe and check favorite in parallel
+    const [recipeRes, userRes] = await Promise.all([
+      supabase.from('recipes').select(recipeColumns).eq('id', id).single(),
+      supabase.auth.getUser(),
+    ]);
+
+    if (recipeRes.error) { setError(true); setLoading(false); return; }
+    const data = recipeRes.data;
     setRecipe(data);
     setLoading(false);
 
+    // Fetch profile name and favorite status in parallel
+    const user = userRes.data?.user;
+    const promises: PromiseLike<void>[] = [];
+
     if (data?.created_by) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', data.created_by)
-        .maybeSingle();
-      setAddedByName(profile?.full_name?.trim() || null);
+      promises.push(
+        supabase.from('profiles').select('full_name').eq('id', data.created_by).maybeSingle()
+          .then(({ data: profile }) => { setAddedByName(profile?.full_name?.trim() || null); })
+      );
     } else {
       setAddedByName(null);
     }
-  }
 
-  async function checkFavorite() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const { data } = await supabase
-      .from('favorites')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('recipe_id', id)
-      .maybeSingle();
-    setIsFavorite(!!data);
+    if (user) {
+      promises.push(
+        supabase.from('favorites').select('id').eq('user_id', user.id).eq('recipe_id', id).maybeSingle()
+          .then(({ data: fav }) => { setIsFavorite(!!fav); })
+      );
+    }
+
+    await Promise.all(promises);
   }
 
   async function confirmDelete() {
@@ -95,27 +126,40 @@ export default function RecipeDetailScreen() {
       ]);
       return;
     }
-    if (isFavorite) {
-      await supabase.from('favorites').delete().eq('user_id', userId).eq('recipe_id', id);
-    } else {
-      await supabase.from('favorites').insert({ user_id: userId, recipe_id: id });
-    }
-    const newVal = !isFavorite;
+    const wasF = isFavorite;
+    const newVal = !wasF;
+    // Optimistic update
     setIsFavorite(newVal);
-    setToast(newVal ? 'Added to favorites' : 'Removed from favorites');
+    try {
+      if (wasF) {
+        const { error } = await supabase.from('favorites').delete().eq('user_id', userId).eq('recipe_id', id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('favorites').insert({ user_id: userId, recipe_id: id });
+        if (error) throw error;
+      }
+      setToast(newVal ? 'Added to favorites' : 'Removed from favorites');
+    } catch {
+      // Rollback on failure
+      setIsFavorite(wasF);
+      setToast('Failed to update favorite');
+    }
     setTimeout(() => setToast(''), 2000);
   }
 
-  async function handleCopyLink() {
+  async function handleShare() {
     if (Platform.OS === 'web') {
       await navigator.clipboard.writeText(window.location.href);
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
+    } else {
+      try {
+        await Share.share({
+          title: recipe?.title ?? 'Recipe',
+          message: `Check out ${recipe?.title} on McMichael Munchies!`,
+        });
+      } catch { /* user cancelled */ }
     }
-  }
-
-  function esc(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
   function handlePrint() {
@@ -131,36 +175,54 @@ export default function RecipeDetailScreen() {
     style.textContent = `
       @media print {
         body * { visibility: hidden; }
-        #recipe-printable, #recipe-printable * { visibility: visible; }
+        #recipe-printable, #recipe-printable * { visibility: visible; color: #333 !important; }
         #recipe-printable {
           position: absolute; left: 0; top: 0; width: 100%;
-          font-family: Georgia, serif; padding: 20px; color: #333;
+          font-family: Georgia, serif; padding: 24px; color: #333;
+          max-width: 700px; margin: 0 auto;
         }
+        #recipe-printable img { max-width: 100%; page-break-inside: avoid; }
+        #recipe-printable [style*="background"] { background: transparent !important; -webkit-print-color-adjust: exact; }
+        h1, h2, h3, p, li { page-break-inside: avoid; orphans: 3; widows: 3; }
       }
     `;
     window.print();
   }
 
   if (loading) {
-    return <ActivityIndicator style={styles.loader} color={Colors.primary} />;
+    return (
+      <View style={styles.outerWrap}>
+        <View style={styles.skeletonWrap}>
+          <Skeleton width="100%" height={200} borderRadius={12} />
+          <View style={styles.skeletonBody}>
+            <Skeleton width="70%" height={24} />
+            <Skeleton width="50%" height={14} />
+            <Skeleton width="100%" height={60} borderRadius={10} />
+            <Skeleton width="100%" height={16} />
+            <Skeleton width="100%" height={16} />
+            <Skeleton width="80%" height={16} />
+          </View>
+        </View>
+      </View>
+    );
   }
 
   if (error || !recipe) {
     return (
       <View style={styles.loader}>
         <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
-        <Text style={{ color: Colors.textSecondary, fontSize: 16, marginTop: 12 }}>
+        <Text style={styles.errorText}>
           {error ? 'Failed to load recipe.' : 'Recipe not found.'}
         </Text>
-        <TouchableOpacity onPress={loadRecipe} style={{ marginTop: 12 }}>
-          <Text style={{ color: Colors.primary, fontWeight: '600', fontSize: 15 }}>Try again</Text>
+        <TouchableOpacity onPress={loadRecipe} style={styles.retryButton}>
+          <Text style={styles.retryText}>Try again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.outerWrap}>
     <ScrollView
       ref={scrollRef}
       style={styles.container}
@@ -168,6 +230,19 @@ export default function RecipeDetailScreen() {
       onScroll={(e) => setShowScrollTop(e.nativeEvent.contentOffset.y > 400)}
       scrollEventThrottle={200}
     >
+      {/* Web back link */}
+      {Platform.OS === 'web' && (
+        <View style={styles.backRow}>
+          <TouchableOpacity
+            style={styles.backLink}
+            onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/browse')}
+          >
+            <Ionicons name="arrow-back" size={16} color={Colors.primary} />
+            <Text style={styles.backLinkText}>Back to recipes</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Hero Image */}
       {recipe.image_url ? (
         <View style={styles.heroWrap}>
@@ -185,7 +260,10 @@ export default function RecipeDetailScreen() {
           ) : null}
         </View>
       ) : (
-        <View style={[styles.heroImage, styles.heroPlaceholder]} />
+        <View style={[styles.heroImage, styles.heroPlaceholder]}>
+          <Ionicons name="restaurant-outline" size={48} color={Colors.primary} style={{ opacity: 0.3 }} />
+          <Text style={styles.heroPlaceholderTitle} numberOfLines={2}>{recipe.title}</Text>
+        </View>
       )}
 
       <View style={styles.body} nativeID="recipe-printable">
@@ -196,19 +274,21 @@ export default function RecipeDetailScreen() {
             <Text style={styles.title}>{recipe.title}</Text>
           </View>
           <View style={styles.titleActions}>
+            <Tooltip label={linkCopied ? 'Copied!' : Platform.OS === 'web' ? 'Copy link' : 'Share'}>
+              <TouchableOpacity onPress={handleShare} style={styles.actionButton}>
+                <Ionicons
+                  name={linkCopied ? 'checkmark' : Platform.OS === 'web' ? 'link-outline' : 'share-outline'}
+                  size={20}
+                  color={linkCopied ? Colors.primary : Colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </Tooltip>
             {Platform.OS === 'web' && (
-              <>
-                <Tooltip label={linkCopied ? 'Copied!' : 'Copy link'}>
-                  <TouchableOpacity onPress={handleCopyLink} style={styles.actionButton}>
-                    <Ionicons name={linkCopied ? 'checkmark' : 'link-outline'} size={20} color={linkCopied ? Colors.primary : Colors.textSecondary} />
-                  </TouchableOpacity>
-                </Tooltip>
-                <Tooltip label="Print recipe">
-                  <TouchableOpacity onPress={handlePrint} style={styles.actionButton}>
-                    <Ionicons name="print-outline" size={20} color={Colors.textSecondary} />
-                  </TouchableOpacity>
-                </Tooltip>
-              </>
+              <Tooltip label="Print recipe">
+                <TouchableOpacity onPress={handlePrint} style={styles.actionButton}>
+                  <Ionicons name="print-outline" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </Tooltip>
             )}
             {isMemberOrAdmin && (
               <>
@@ -356,7 +436,6 @@ export default function RecipeDetailScreen() {
       <TouchableOpacity
         style={styles.scrollTopBtn}
         onPress={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
-        // @ts-ignore
         dataSet={{ hover: 'btn' }}
       >
         <Ionicons name="arrow-up" size={18} color="#FFF" />
@@ -403,11 +482,21 @@ export default function RecipeDetailScreen() {
 }
 
 const styles = StyleSheet.create({
+  outerWrap: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.background },
   loader: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorText: { color: Colors.textSecondary, fontSize: 16, marginTop: 12 },
+  retryButton: { marginTop: 12 },
+  retryText: { color: Colors.primary, fontWeight: '600', fontSize: 15 },
+  skeletonWrap: { flex: 1, backgroundColor: Colors.background, maxWidth: 700, width: '100%', alignSelf: 'center' },
+  skeletonBody: { padding: 20, gap: 14 },
+  backRow: { maxWidth: 700, width: '100%', alignSelf: 'center', paddingHorizontal: 20, paddingTop: 12 },
+  backLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  backLinkText: { fontSize: 14, color: Colors.primary, fontWeight: '500' },
   heroWrap: { width: '100%', maxWidth: 600, alignSelf: 'center', position: 'relative' },
   heroImage: { width: '100%', maxWidth: 600, aspectRatio: 16 / 9, alignSelf: 'center', borderRadius: 12 },
-  heroPlaceholder: { backgroundColor: Colors.border },
+  heroPlaceholder: { backgroundColor: Colors.secondary, alignItems: 'center', justifyContent: 'center', gap: 8 },
+  heroPlaceholderTitle: { fontSize: 18, fontWeight: '700', color: Colors.primary, opacity: 0.5, textAlign: 'center', paddingHorizontal: 20 },
   stockBadge: {
     position: 'absolute',
     top: 8,
@@ -421,7 +510,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   stockBadgeText: { fontSize: 11, color: Colors.textSecondary, fontWeight: '600' },
-  body: { padding: 20 },
+  body: { padding: 20, maxWidth: 700, width: '100%', alignSelf: 'center' },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

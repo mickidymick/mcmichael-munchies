@@ -12,10 +12,11 @@ type Props = {
   size?: number;
 };
 
-export default function FamilyBadge({ family, size = 32 }: Props) {
-  if (!family || !FAMILY_CONFIG[family]) return null;
+const FALLBACK = { letter: '?', bg: '#CCBBAA', color: '#FFF' };
 
-  const config = FAMILY_CONFIG[family];
+export default function FamilyBadge({ family, size = 32 }: Props) {
+  if (!family) return null;
+  const config = FAMILY_CONFIG[family] || FALLBACK;
   const fontSize = size * 0.5;
   const borderRadius = size / 2;
 

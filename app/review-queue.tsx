@@ -157,7 +157,6 @@ export default function ReviewQueueScreen() {
         renderItem={({ item }) => (
           <View
             style={styles.card}
-            // @ts-ignore
             dataSet={{ hover: 'card' }}
           >
             <TouchableOpacity
@@ -191,7 +190,6 @@ export default function ReviewQueueScreen() {
                 style={styles.deleteBtn}
                 onPress={() => deleteRecipe(item.id, item.recipe_id, item.recipe.title)}
                 disabled={removing === item.id}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 <Ionicons name="trash-outline" size={16} color={Colors.danger} />
@@ -199,7 +197,6 @@ export default function ReviewQueueScreen() {
               <TouchableOpacity
                 style={styles.editBtn}
                 onPress={() => router.push(`/edit-recipe/${item.recipe_id}`)}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
@@ -209,7 +206,6 @@ export default function ReviewQueueScreen() {
                 style={styles.reviewedBtn}
                 onPress={() => markReviewed(item.id)}
                 disabled={removing === item.id}
-                // @ts-ignore
                 dataSet={{ hover: 'btn' }}
               >
                 {removing === item.id ? (

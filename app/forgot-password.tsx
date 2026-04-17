@@ -81,7 +81,6 @@ export default function ForgotPasswordScreen() {
           style={[styles.btn, !email.trim() && styles.btnDisabled]}
           onPress={handleSendReset}
           disabled={submitting || !email.trim()}
-          // @ts-ignore
           dataSet={{ hover: 'btn' }}
         >
           {submitting ? (

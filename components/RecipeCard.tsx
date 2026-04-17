@@ -26,7 +26,6 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
       onPress={() => router.push(`/recipe/${recipe.id}`)}
       accessibilityRole="button"
       accessibilityLabel={`View recipe: ${recipe.title}`}
-      // @ts-ignore - RN Web dataSet
       dataSet={{ hover: 'card' }}
     >
       <View style={styles.imageWrap}>
