@@ -60,3 +60,12 @@ export const COOK_TIMES = [
 export const DIETARY_TAGS = [
   'vegetarian', 'vegan', 'gluten-free', 'dairy-free', 'keto', 'low-carb',
 ];
+
+export const DIETARY_ICONS: Record<string, { icon: keyof typeof Ionicons.glyphMap; color: string; abbrev: string }> = {
+  'vegetarian': { icon: 'leaf-outline', color: '#2D936C', abbrev: 'VEG' },
+  'vegan': { icon: 'leaf', color: '#1B7A3D', abbrev: 'VGN' },
+  'gluten-free': { icon: 'ban-outline', color: '#C47C30', abbrev: 'GF' },
+  'dairy-free': { icon: 'water-outline', color: '#2E86AB', abbrev: 'DF' },
+  'keto': { icon: 'flash-outline', color: '#A23B72', abbrev: 'K' },
+  'low-carb': { icon: 'trending-down-outline', color: '#E67E22', abbrev: 'LC' },
+};

@@ -54,5 +54,32 @@ export type Profile = {
   id: string;
   full_name: string;
   role: UserRole;
+  avatar_url?: string | null;
+  created_at: string;
+};
+
+export type Comment = {
+  id: string;
+  recipe_id: string;
+  user_id: string;
+  body: string;
+  created_at: string;
+  profiles?: { full_name: string; avatar_url?: string | null };
+};
+
+export type ShoppingItem = {
+  id: string;
+  user_id: string;
+  item: string;
+  checked: boolean;
+  recipe_id: string | null;
+  created_at: string;
+};
+
+export type Collection = {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
   created_at: string;
 };

@@ -14,10 +14,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Colors, Layout } from '../../constants/colors';
 import { supabase } from '../../lib/supabase';
 import { useUserRole } from '../../lib/useUserRole';
+import UserAvatar from '../../components/UserAvatar';
+import { useTheme } from '../../lib/useTheme';
 
 const HEADER_TOP = Layout.headerTop;
 
@@ -28,6 +31,7 @@ type Mode = 'login' | 'signup';
 export default function ProfileScreen() {
   const router = useRouter();
   const { role, isAdmin, isMemberOrAdmin, refresh: refreshRole } = useUserRole();
+  const { mode: themeMode, setMode: setThemeMode } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<Mode>('login');
@@ -46,6 +50,7 @@ export default function ProfileScreen() {
   const [requestStatus, setRequestStatus] = useState<'none' | 'pending' | 'denied' | 'sending'>('none');
   const [requestMessage, setRequestMessage] = useState('');
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -89,7 +94,38 @@ export default function ProfileScreen() {
       if (pendingRes.count !== null) setPendingRequestCount(pendingRes.count);
       if (requestRes.data) setRequestStatus(requestRes.data.status as 'pending' | 'denied');
       else setRequestStatus('none');
+
+      // Load avatar
+      const { data: profile } = await supabase.from('profiles').select('avatar_url').eq('id', currentUser.id).maybeSingle();
+      if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
     } catch { /* silently keep stale stats on network error */ }
+  }
+
+  async function pickAvatar() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled || !user) return;
+    try {
+      const uri = result.assets[0].uri;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const ext = blob.type?.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
+      const path = `avatar-${user.id}.${ext}`;
+      const { error: uploadErr } = await supabase.storage
+        .from('recipe-images')
+        .upload(path, blob, { contentType: blob.type || 'image/jpeg', upsert: true });
+      if (uploadErr) { Alert.alert('Upload failed', uploadErr.message); return; }
+      const { data: urlData } = supabase.storage.from('recipe-images').getPublicUrl(path);
+      const url = urlData.publicUrl + '?t=' + Date.now(); // bust cache
+      await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id);
+      setAvatarUrl(url);
+    } catch (e: any) {
+      Alert.alert('Upload failed', e?.message ?? 'Could not upload image.');
+    }
   }
 
   // Reload stats and role every time profile tab gets focus
@@ -200,11 +236,12 @@ export default function ProfileScreen() {
 
         {/* Profile card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {(displayName[0] ?? '?').toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity onPress={pickAvatar} style={styles.avatarWrap}>
+            <UserAvatar name={displayName} avatarUrl={avatarUrl} size={80} />
+            <View style={styles.avatarEditBadge}>
+              <Ionicons name="camera" size={12} color="#FFF" />
+            </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.email}>{user.email}</Text>
           <View style={styles.roleBadge}>
@@ -424,6 +461,29 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* Theme */}
+        <View style={styles.actionsSection}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <View style={styles.themeRow}>
+            {(['system', 'light', 'dark'] as const).map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                style={[styles.themeBtn, themeMode === opt && styles.themeBtnActive]}
+                onPress={() => setThemeMode(opt)}
+              >
+                <Ionicons
+                  name={opt === 'system' ? 'phone-portrait-outline' : opt === 'light' ? 'sunny-outline' : 'moon-outline'}
+                  size={18}
+                  color={themeMode === opt ? '#FFF' : Colors.text}
+                />
+                <Text style={[styles.themeBtnText, themeMode === opt && styles.themeBtnTextActive]}>
+                  {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         {/* Sign out */}
         <TouchableOpacity
           style={styles.logoutButton}
@@ -558,16 +618,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  avatarWrap: { position: 'relative', marginBottom: 12 },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
-  avatarText: { fontSize: 32, color: '#FFF', fontWeight: '700' },
   name: { fontSize: 20, fontWeight: '700', color: Colors.text },
   email: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
   roleBadge: {
@@ -708,6 +772,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  themeRow: { flexDirection: 'row', gap: 8 },
+  themeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  themeBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  themeBtnText: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  themeBtnTextActive: { color: '#FFF' },
   logoutText: { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
   footer: { alignItems: 'center', paddingVertical: 24, marginTop: 24, backgroundColor: Colors.footer },
   footerText: { fontSize: 12, color: Colors.textSecondary },

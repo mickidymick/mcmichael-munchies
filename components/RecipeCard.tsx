@@ -11,6 +11,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { Recipe } from '../lib/supabase';
 import FamilyBadge from './FamilyBadge';
+import { DIETARY_ICONS } from '../constants/recipes';
 
 type Props = {
   recipe: Recipe;
@@ -19,6 +20,7 @@ type Props = {
 
 export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
   const router = useRouter();
+  const dietaryTags = (recipe.tags ?? []).filter((t) => DIETARY_ICONS[t.toLowerCase()]);
 
   return (
     <TouchableOpacity
@@ -76,8 +78,18 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
             {recipe.estimated_calories ? ` · ${recipe.estimated_calories} cal` : ''}
           </Text>
         ) : null}
-        {recipe.tags?.length > 0 && (
-          <Text style={styles.cardTags} numberOfLines={1}>{recipe.tags.slice(0, 3).join(' · ')}</Text>
+        {dietaryTags.length > 0 && (
+          <View style={styles.dietaryRow}>
+            {dietaryTags.map((tag) => {
+              const config = DIETARY_ICONS[tag.toLowerCase()];
+              return (
+                <View key={tag} style={[styles.dietaryBadge, { backgroundColor: config.color + '18' }]}>
+                  <Ionicons name={config.icon} size={10} color={config.color} />
+                  <Text style={[styles.dietaryText, { color: config.color }]}>{config.abbrev}</Text>
+                </View>
+              );
+            })}
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -134,5 +146,14 @@ const styles = StyleSheet.create({
   cardTitle: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.text },
   cardMeta: { fontSize: 12, color: Colors.textSecondary },
   cardTime: { fontSize: 11, color: Colors.textSecondary },
-  cardTags: { fontSize: 11, color: Colors.primary, marginTop: 2 },
+  dietaryRow: { flexDirection: 'row', gap: 4, marginTop: 2, flexWrap: 'wrap' },
+  dietaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  dietaryText: { fontSize: 9, fontWeight: '700' },
 });

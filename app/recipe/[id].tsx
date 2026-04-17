@@ -8,23 +8,227 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Modal,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Share } from 'react-native';
+import { useKeepAwake } from 'expo-keep-awake';
 import { Colors, Layout } from '../../constants/colors';
-import { supabase, Recipe } from '../../lib/supabase';
+import { TextInput } from 'react-native';
+import { supabase, Recipe, Comment } from '../../lib/supabase';
 import FamilyBadge from '../../components/FamilyBadge';
 import Tooltip from '../../components/Tooltip';
 import Skeleton from '../../components/Skeleton';
 import { useUserRole } from '../../lib/useUserRole';
+import CollectionPicker from '../../components/CollectionPicker';
+import { scaleAmount } from '../../lib/utils';
+import { DIETARY_ICONS } from '../../constants/recipes';
+
+// ─── Cook Mode Component ──────────────────────────────────────────────────────
+
+function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFactor: number; onClose: () => void }) {
+  useKeepAwake();
+  const steps = (recipe.steps ?? []).sort((a, b) => a.order - b.order);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showIngredients, setShowIngredients] = useState(false);
+
+  if (steps.length === 0) return null;
+
+  const step = steps[currentStep];
+  const isFirst = currentStep === 0;
+  const isLast = currentStep === steps.length - 1;
+
+  return (
+    <Modal visible animationType="slide" statusBarTranslucent>
+      <View style={cookStyles.container}>
+        {/* Header */}
+        <View style={cookStyles.header}>
+          <TouchableOpacity onPress={onClose} style={cookStyles.closeBtn}>
+            <Ionicons name="close" size={24} color={Colors.text} />
+          </TouchableOpacity>
+          <Text style={cookStyles.headerTitle} numberOfLines={1}>{recipe.title}</Text>
+          <TouchableOpacity
+            onPress={() => setShowIngredients(!showIngredients)}
+            style={cookStyles.ingredientsToggle}
+          >
+            <Ionicons name="list-outline" size={22} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Ingredients panel */}
+        {showIngredients && (
+          <ScrollView style={cookStyles.ingredientsPanel}>
+            <Text style={cookStyles.ingredientsPanelTitle}>Ingredients{scaleFactor !== 1 ? ` (${scaleFactor}x)` : ''}</Text>
+            {(recipe.ingredients ?? []).map((ing, i) => (
+              <Text key={i} style={cookStyles.ingredientItem}>
+                {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
+              </Text>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Step content */}
+        <ScrollView
+          style={cookStyles.body}
+          contentContainerStyle={cookStyles.bodyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={cookStyles.stepCounter}>Step {currentStep + 1} of {steps.length}</Text>
+          <Text style={cookStyles.stepText}>{step.instruction}</Text>
+          {step.image_url && (
+            <Image source={{ uri: step.image_url }} style={cookStyles.stepImage} resizeMode="cover" />
+          )}
+        </ScrollView>
+
+        {/* Navigation */}
+        <View style={cookStyles.nav}>
+          <TouchableOpacity
+            style={[cookStyles.navBtn, isFirst && cookStyles.navBtnDisabled]}
+            onPress={() => !isFirst && setCurrentStep(currentStep - 1)}
+            disabled={isFirst}
+          >
+            <Ionicons name="arrow-back" size={20} color={isFirst ? Colors.textSecondary : '#FFF'} />
+            <Text style={[cookStyles.navBtnText, isFirst && cookStyles.navBtnTextDisabled]}>Previous</Text>
+          </TouchableOpacity>
+
+          {/* Progress dots */}
+          <View style={cookStyles.dotsRow}>
+            {steps.map((_, i) => (
+              <View key={i} style={[cookStyles.dot, i === currentStep && cookStyles.dotActive, i < currentStep && cookStyles.dotDone]} />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[cookStyles.navBtn, cookStyles.navBtnPrimary]}
+            onPress={() => {
+              if (isLast) onClose();
+              else setCurrentStep(currentStep + 1);
+            }}
+          >
+            <Text style={cookStyles.navBtnText}>{isLast ? 'Done' : 'Next'}</Text>
+            <Ionicons name={isLast ? 'checkmark' : 'arrow-forward'} size={20} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const cookStyles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'web' ? 16 : 60,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+  closeBtn: { padding: 4 },
+  headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.text },
+  ingredientsToggle: { padding: 4 },
+  ingredientsPanel: {
+    maxHeight: 200,
+    backgroundColor: Colors.secondary,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  ingredientsPanelTitle: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 },
+  ingredientItem: { fontSize: 14, color: Colors.text, lineHeight: 22, paddingLeft: 8 },
+  body: { flex: 1 },
+  bodyContent: {
+    padding: 24,
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  stepCounter: { fontSize: 14, fontWeight: '600', color: Colors.primary, marginBottom: 16, textAlign: 'center' },
+  stepText: { fontSize: 20, color: Colors.text, lineHeight: 32 },
+  stepImage: { width: '100%', aspectRatio: 16 / 9, borderRadius: 12, marginTop: 20 },
+  nav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    paddingBottom: Platform.OS === 'web' ? 14 : 34,
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: 12,
+  },
+  navBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  navBtnPrimary: {},
+  navBtnDisabled: { backgroundColor: Colors.border },
+  navBtnText: { fontSize: 15, fontWeight: '700', color: '#FFF' },
+  navBtnTextDisabled: { color: Colors.textSecondary },
+  dotsRow: { flexDirection: 'row', gap: 4, alignItems: 'center', flexShrink: 1, flexWrap: 'wrap', justifyContent: 'center' },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.border },
+  dotActive: { backgroundColor: Colors.primary, width: 16 },
+  dotDone: { backgroundColor: Colors.primaryLight },
+});
+
+// ─── Scale Factor Buttons ─────────────────────────────────────────────────────
+
+const SCALE_OPTIONS = [0.5, 1, 2, 3];
+
+function ScaleButtons({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  return (
+    <View style={scaleStyles.row}>
+      {SCALE_OPTIONS.map((s) => (
+        <TouchableOpacity
+          key={s}
+          style={[scaleStyles.btn, value === s && scaleStyles.btnActive]}
+          onPress={() => onChange(s)}
+          dataSet={{ hover: 'chip' }}
+        >
+          <Text style={[scaleStyles.btnText, value === s && scaleStyles.btnTextActive]}>
+            {s === 1 ? '1x' : `${s}x`}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const scaleStyles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  btn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  btnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  btnText: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  btnTextActive: { color: '#FFF' },
+});
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { isMemberOrAdmin, userId } = useUserRole();
+  const { isMemberOrAdmin, isAdmin, userId } = useUserRole();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [addedByName, setAddedByName] = useState<string | null>(null);
@@ -37,8 +241,31 @@ export default function RecipeDetailScreen() {
   const [toast, setToast] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
+  // Serving scaler
+  const [scaleFactor, setScaleFactor] = useState(1);
+
+  // Ingredient checklist
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<number>>(new Set());
+
+  // Cook mode
+  const [showCookMode, setShowCookMode] = useState(false);
+
+  // Comments
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+
+  // Collections
+  const [showCollectionPicker, setShowCollectionPicker] = useState(false);
+
   useEffect(() => {
     loadRecipe();
+  }, [id]);
+
+  // Reset scaler and checklist when recipe changes
+  useEffect(() => {
+    setScaleFactor(1);
+    setCheckedIngredients(new Set());
   }, [id]);
 
   // Update page title and OG meta on web when recipe loads
@@ -75,7 +302,6 @@ export default function RecipeDetailScreen() {
 
   async function loadRecipe() {
     setError(false);
-    // Fetch recipe and check favorite in parallel
     const [recipeRes, userRes] = await Promise.all([
       supabase.from('recipes').select(recipeColumns).eq('id', id).single(),
       supabase.auth.getUser(),
@@ -86,7 +312,6 @@ export default function RecipeDetailScreen() {
     setRecipe(data);
     setLoading(false);
 
-    // Fetch profile name and favorite status in parallel
     const user = userRes.data?.user;
     const promises: PromiseLike<void>[] = [];
 
@@ -109,6 +334,43 @@ export default function RecipeDetailScreen() {
     await Promise.all(promises);
   }
 
+  async function loadComments() {
+    const { data } = await supabase
+      .from('comments')
+      .select('id,recipe_id,user_id,body,created_at,profiles(full_name,avatar_url)')
+      .eq('recipe_id', id)
+      .order('created_at', { ascending: true });
+    if (data) setComments(data as unknown as Comment[]);
+  }
+
+  async function submitComment() {
+    if (!commentText.trim() || !userId) return;
+    setSubmittingComment(true);
+    const { error } = await supabase.from('comments').insert({
+      recipe_id: id,
+      user_id: userId,
+      body: commentText.trim(),
+    });
+    setSubmittingComment(false);
+    if (error) {
+      setToast('Failed to post comment');
+      setTimeout(() => setToast(''), 2000);
+      return;
+    }
+    setCommentText('');
+    loadComments();
+  }
+
+  async function deleteComment(commentId: string) {
+    await supabase.from('comments').delete().eq('id', commentId);
+    loadComments();
+  }
+
+  // Load comments when recipe loads
+  useEffect(() => {
+    if (recipe) loadComments();
+  }, [recipe?.id]);
+
   async function confirmDelete() {
     setDeleting(true);
     const { error } = await supabase.from('recipes').delete().eq('id', id);
@@ -128,7 +390,6 @@ export default function RecipeDetailScreen() {
     }
     const wasF = isFavorite;
     const newVal = !wasF;
-    // Optimistic update
     setIsFavorite(newVal);
     try {
       if (wasF) {
@@ -140,7 +401,6 @@ export default function RecipeDetailScreen() {
       }
       setToast(newVal ? 'Added to favorites' : 'Removed from favorites');
     } catch {
-      // Rollback on failure
       setIsFavorite(wasF);
       setToast('Failed to update favorite');
     }
@@ -164,7 +424,6 @@ export default function RecipeDetailScreen() {
 
   function handlePrint() {
     if (Platform.OS !== 'web' || !recipe) return;
-    // Inject print-only styles, then trigger browser print
     const styleId = 'print-recipe-style';
     let style = document.getElementById(styleId) as HTMLStyleElement | null;
     if (!style) {
@@ -187,6 +446,15 @@ export default function RecipeDetailScreen() {
       }
     `;
     window.print();
+  }
+
+  function toggleIngredientCheck(index: number) {
+    setCheckedIngredients((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
   }
 
   if (loading) {
@@ -221,8 +489,18 @@ export default function RecipeDetailScreen() {
     );
   }
 
+  const hasSteps = recipe.steps?.length > 0;
+  const scaledCalories = recipe.estimated_calories != null ? Math.round(recipe.estimated_calories * scaleFactor) : null;
+  const servingsNum = recipe.servings != null ? parseInt(String(recipe.servings), 10) : 0;
+  const scaledServings = servingsNum > 0 ? Math.round(servingsNum * scaleFactor) : 0;
+
   return (
     <View style={styles.outerWrap}>
+    {/* Cook Mode Modal */}
+    {showCookMode && (
+      <CookMode recipe={recipe} scaleFactor={scaleFactor} onClose={() => setShowCookMode(false)} />
+    )}
+
     <ScrollView
       ref={scrollRef}
       style={styles.container}
@@ -304,6 +582,24 @@ export default function RecipeDetailScreen() {
                 </Tooltip>
               </>
             )}
+            {isAdmin && (
+              <Tooltip label="Feature as Recipe of the Week">
+                <TouchableOpacity
+                  onPress={async () => {
+                    await supabase.from('app_settings').upsert({
+                      key: 'featured_recipe',
+                      value: { recipe_id: recipe.id },
+                      updated_at: new Date().toISOString(),
+                    });
+                    setToast('Set as Recipe of the Week!');
+                    setTimeout(() => setToast(''), 2000);
+                  }}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="star-outline" size={20} color={Colors.primary} />
+                </TouchableOpacity>
+              </Tooltip>
+            )}
             <Tooltip label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
               <TouchableOpacity onPress={toggleFavorite} style={styles.favButton}>
                 <Ionicons
@@ -313,6 +609,13 @@ export default function RecipeDetailScreen() {
               />
             </TouchableOpacity>
             </Tooltip>
+            {userId && (
+              <Tooltip label="Add to collection">
+                <TouchableOpacity onPress={() => setShowCollectionPicker(true)} style={styles.actionButton}>
+                  <Ionicons name="book-outline" size={20} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </Tooltip>
+            )}
           </View>
         </View>
 
@@ -350,24 +653,21 @@ export default function RecipeDetailScreen() {
                 <Text style={styles.infoValue}>{recipe.cook_time} min</Text>
               </View>
             )}
-            {recipe.servings != null && (
+            {scaledServings > 0 && (
               <View style={styles.infoItem}>
                 <Ionicons name="people-outline" size={18} color={Colors.primary} />
                 <Text style={styles.infoLabel}>Servings</Text>
-                <Text style={styles.infoValue}>{recipe.servings}</Text>
+                <Text style={styles.infoValue}>{scaledServings}</Text>
               </View>
             )}
-            {recipe.estimated_calories != null && (
+            {scaledCalories != null && (
               <View style={styles.infoItem}>
                 <Ionicons name="nutrition-outline" size={18} color={Colors.primary} />
                 <Text style={styles.infoLabel}>Calories</Text>
-                <Text style={styles.infoValue}>{recipe.estimated_calories}</Text>
-                {recipe.servings != null && (() => {
-                  const lower = parseInt(String(recipe.servings), 10);
-                  return lower > 0 ? (
-                    <Text style={styles.infoSub}>{Math.round(recipe.estimated_calories / lower)}/serving</Text>
-                  ) : null;
-                })()}
+                <Text style={styles.infoValue}>{scaledCalories}</Text>
+                {scaledServings > 0 && (
+                  <Text style={styles.infoSub}>{Math.round(scaledCalories / scaledServings)}/serving</Text>
+                )}
               </View>
             )}
           </View>
@@ -375,11 +675,22 @@ export default function RecipeDetailScreen() {
 
         {recipe.tags?.length > 0 && (
           <View style={styles.tags}>
-            {recipe.tags.map((tag) => (
-              <View key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
+            {recipe.tags.map((tag) => {
+              const dietary = DIETARY_ICONS[tag.toLowerCase()];
+              if (dietary) {
+                return (
+                  <View key={tag} style={[styles.tag, { backgroundColor: dietary.color + '18' }]}>
+                    <Ionicons name={dietary.icon} size={12} color={dietary.color} />
+                    <Text style={[styles.tagText, { color: dietary.color }]}>{tag}</Text>
+                  </View>
+                );
+              }
+              return (
+                <View key={tag} style={styles.tag}>
+                  <Text style={styles.tagText}>{tag}</Text>
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -394,23 +705,71 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
 
+        {/* Start Cooking button */}
+        {hasSteps && (
+          <TouchableOpacity
+            style={styles.cookModeBtn}
+            onPress={() => setShowCookMode(true)}
+            dataSet={{ hover: 'btn' }}
+          >
+            <Ionicons name="restaurant" size={18} color="#FFF" />
+            <Text style={styles.cookModeBtnText}>Start Cooking</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Ingredients */}
         {recipe.ingredients?.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            {recipe.ingredients.map((ing, i) => (
-              <View key={i} style={styles.ingredient}>
-                <View style={styles.bullet} />
-                <Text style={styles.ingredientText}>
-                  {[ing.amount, ing.unit, ing.item].filter(Boolean).join(' ')}
-                </Text>
-              </View>
-            ))}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Ingredients</Text>
+              {checkedIngredients.size > 0 && (
+                <TouchableOpacity onPress={() => setCheckedIngredients(new Set())}>
+                  <Text style={styles.resetCheckText}>Reset</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <ScaleButtons value={scaleFactor} onChange={setScaleFactor} />
+            {recipe.ingredients.map((ing, i) => {
+              const checked = checkedIngredients.has(i);
+              return (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.ingredient}
+                  onPress={() => toggleIngredientCheck(i)}
+                  activeOpacity={0.6}
+                >
+                  <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                    {checked && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                  </View>
+                  <Text style={[styles.ingredientText, checked && styles.ingredientTextChecked]}>
+                    {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+            {userId && (
+              <TouchableOpacity
+                style={styles.addToListBtn}
+                onPress={async () => {
+                  const scaled = (recipe.ingredients ?? []).map((ing) =>
+                    [scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')
+                  );
+                  const inserts = scaled.map((item) => ({ user_id: userId, item, recipe_id: recipe.id }));
+                  const { error } = await supabase.from('shopping_list').insert(inserts);
+                  setToast(error ? 'Failed to add items' : `Added ${inserts.length} items to shopping list`);
+                  setTimeout(() => setToast(''), 2000);
+                }}
+                dataSet={{ hover: 'btn' }}
+              >
+                <Ionicons name="cart-outline" size={16} color={Colors.primary} />
+                <Text style={styles.addToListText}>Add to Shopping List</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         {/* Steps */}
-        {recipe.steps?.length > 0 && (
+        {hasSteps && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Instructions</Text>
             {recipe.steps
@@ -430,6 +789,65 @@ export default function RecipeDetailScreen() {
               ))}
           </View>
         )}
+
+        {/* Comments */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Comments</Text>
+          {comments.length === 0 && (
+            <Text style={styles.noComments}>No comments yet. Be the first!</Text>
+          )}
+          {comments.map((c) => (
+            <View key={c.id} style={styles.commentCard}>
+              <View style={styles.commentHeader}>
+                <View style={styles.commentAvatar}>
+                  <Text style={styles.commentAvatarText}>
+                    {(c.profiles?.full_name?.[0] ?? '?').toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.commentMeta}>
+                  <Text style={styles.commentAuthor}>{c.profiles?.full_name ?? 'Unknown'}</Text>
+                  <Text style={styles.commentDate}>
+                    {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </Text>
+                </View>
+                {c.user_id === userId && (
+                  <TouchableOpacity onPress={() => deleteComment(c.id)} style={styles.commentDelete}>
+                    <Ionicons name="trash-outline" size={14} color={Colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Text style={styles.commentBody}>{c.body}</Text>
+            </View>
+          ))}
+          {userId ? (
+            <View style={styles.commentInput}>
+              <TextInput
+                style={styles.commentTextInput}
+                placeholder="Add a comment..."
+                placeholderTextColor={Colors.textSecondary}
+                value={commentText}
+                onChangeText={setCommentText}
+                multiline
+                maxLength={500}
+              />
+              <TouchableOpacity
+                style={[styles.commentSendBtn, !commentText.trim() && styles.commentSendBtnDisabled]}
+                onPress={submitComment}
+                disabled={!commentText.trim() || submittingComment}
+              >
+                {submittingComment ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="send" size={16} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <Text style={styles.commentSignIn}>Sign in to comment</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </ScrollView>
     {showScrollTop && (
@@ -446,6 +864,15 @@ export default function RecipeDetailScreen() {
         <Text style={styles.toastText}>{toast}</Text>
       </View>
     ) : null}
+    {userId && (
+      <CollectionPicker
+        visible={showCollectionPicker}
+        recipeId={recipe.id}
+        userId={userId}
+        onClose={() => setShowCollectionPicker(false)}
+        onDone={(msg) => { setToast(msg); setTimeout(() => setToast(''), 2000); }}
+      />
+    )}
     {showDeleteConfirm && (
       <View style={styles.deleteOverlay}>
         <View style={styles.deleteModal}>
@@ -551,6 +978,9 @@ const styles = StyleSheet.create({
   infoSub: { fontSize: 10, color: Colors.textSecondary },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
   tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: Colors.primary + '18',
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -578,25 +1008,65 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     fontStyle: 'italic',
   },
+  cookModeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginBottom: 20,
+  },
+  cookModeBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
   section: { marginTop: 8, marginBottom: 20 },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 14,
     paddingBottom: 8,
     borderBottomWidth: 2,
     borderBottomColor: Colors.primary,
   },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  resetCheckText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   ingredient: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10, gap: 10 },
-  bullet: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxChecked: {
     backgroundColor: Colors.primary,
-    marginTop: 7,
+    borderColor: Colors.primary,
   },
   ingredientText: { flex: 1, fontSize: 15, color: Colors.text, lineHeight: 22 },
+  ingredientTextChecked: {
+    textDecorationLine: 'line-through',
+    color: Colors.textSecondary,
+  },
+  addToListBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+  },
+  addToListText: { fontSize: 14, fontWeight: '600', color: Colors.primary },
   step: { flexDirection: 'row', marginBottom: 20, gap: 14 },
   stepNumber: {
     width: 30,
@@ -670,6 +1140,60 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
+  // Comments
+  noComments: { fontSize: 14, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 12 },
+  commentCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  commentHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarText: { fontSize: 12, fontWeight: '700', color: '#FFF' },
+  commentMeta: { flex: 1 },
+  commentAuthor: { fontSize: 13, fontWeight: '600', color: Colors.text },
+  commentDate: { fontSize: 11, color: Colors.textSecondary },
+  commentDelete: { padding: 4 },
+  commentBody: { fontSize: 14, color: Colors.text, lineHeight: 21 },
+  commentInput: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+    marginTop: 8,
+  },
+  commentTextInput: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: Colors.text,
+    maxHeight: 100,
+  },
+  commentSendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentSendBtnDisabled: { backgroundColor: Colors.border },
+  commentSignIn: { fontSize: 14, color: Colors.primary, fontWeight: '600', textAlign: 'center', marginTop: 8 },
+
   scrollTopBtn: {
     position: 'absolute',
     bottom: 24,

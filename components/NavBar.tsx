@@ -17,6 +17,7 @@ const NAV_LINKS: { label: string; href: string; icon: keyof typeof Ionicons.glyp
   { label: 'Home', href: '/(tabs)/', icon: 'home-outline', match: (p) => p === '/' || p === '/(tabs)' || p === '/(tabs)/' },
   { label: 'Browse', href: '/(tabs)/browse', icon: 'search-outline', match: (p) => p.startsWith('/browse') },
   { label: 'Favorites', href: '/(tabs)/favorites', icon: 'heart-outline', match: (p) => p.startsWith('/favorites') },
+  { label: 'Shopping List', href: '/shopping-list', icon: 'cart-outline', match: (p) => p.startsWith('/shopping-list') },
   { label: 'Profile', href: '/(tabs)/profile', icon: 'person-outline', match: (p) => p.startsWith('/profile') },
 ];
 

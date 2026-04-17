@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { Colors } from '../constants/colors';
 import NavBar from '../components/NavBar';
 import ErrorBoundary from '../components/ErrorBoundary';
+import { ThemeProvider } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 import { useRouter } from 'expo-router';
 
@@ -103,13 +104,54 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
+    <ThemeProvider>
     <ErrorBoundary>
     <View style={{ flex: 1 }}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
       {Platform.OS === 'web' && <NavBar />}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="collections"
+          options={{
+            headerShown: Platform.OS !== 'web',
+            headerTitle: 'Collections',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="collection/[id]"
+          options={{
+            headerShown: Platform.OS !== 'web',
+            headerTitle: 'Collection',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="shopping-list"
+          options={{
+            headerShown: Platform.OS !== 'web',
+            headerTitle: 'Shopping List',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
+        <Stack.Screen
+          name="about"
+          options={{
+            headerShown: Platform.OS !== 'web',
+            headerTitle: 'About',
+            headerBackTitle: 'Back',
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.primary,
+          }}
+        />
         <Stack.Screen
           name="recipe/[id]"
           options={{
@@ -199,5 +241,6 @@ export default function RootLayout() {
       </Stack>
     </View>
     </ErrorBoundary>
+    </ThemeProvider>
   );
 }

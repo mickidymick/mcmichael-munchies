@@ -46,6 +46,7 @@ export default function HomeScreen() {
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [featuredRecipe, setFeaturedRecipe] = useState<Recipe | null>(null);
   const hasCachedData = useRef(false);
   const initialFetchDone = useRef(false);
 
@@ -111,11 +112,58 @@ export default function HomeScreen() {
           carouselRecipes: newCarousel,
           recentRecipes: newRecent,
         })).catch(() => { /* ignore */ });
+
+        // Fetch featured recipe of the week
+        loadFeaturedRecipe(listColumns);
       }
     } catch {
       setLoadError(true);
     }
     setLoading(false);
+  }
+
+  async function loadFeaturedRecipe(columns: string) {
+    try {
+      // Check app_settings for admin-set featured recipe
+      const { data: setting } = await supabase
+        .from('app_settings')
+        .select('value,updated_at')
+        .eq('key', 'featured_recipe')
+        .maybeSingle();
+
+      let recipeId: string | null = null;
+
+      if (setting?.value?.recipe_id) {
+        // Check if it's been more than 7 days — auto-rotate
+        const updatedAt = new Date(setting.updated_at).getTime();
+        const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        if (updatedAt > weekAgo) {
+          recipeId = setting.value.recipe_id;
+        }
+      }
+
+      if (recipeId) {
+        const { data } = await supabase.from('recipes').select(columns).eq('id', recipeId).maybeSingle();
+        if (data) { setFeaturedRecipe(data as unknown as Recipe); return; }
+      }
+
+      // Auto-select: pick a random recipe
+      const { data: rand } = await supabase.from('recipes').select(columns).limit(1).order('created_at', { ascending: false }).range(
+        Math.floor(Math.random() * Math.max(totalCount, 1)),
+        Math.floor(Math.random() * Math.max(totalCount, 1))
+      );
+      if (rand?.[0]) setFeaturedRecipe(rand[0] as unknown as Recipe);
+    } catch { /* ignore */ }
+  }
+
+  async function goToRandomRecipe() {
+    try {
+      const { count } = await supabase.from('recipes').select('id', { count: 'exact', head: true });
+      if (!count) return;
+      const offset = Math.floor(Math.random() * count);
+      const { data } = await supabase.from('recipes').select('id').range(offset, offset).limit(1);
+      if (data?.[0]) router.push(`/recipe/${data[0].id}`);
+    } catch { /* ignore */ }
   }
 
   // Auto-scroll carousel using requestAnimationFrame
@@ -383,6 +431,58 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      {/* Featured Recipe + Random */}
+      {(featuredRecipe || totalCount > 0) && (
+        <View style={styles.section}>
+          <View style={styles.contentWrap}>
+            {featuredRecipe && (
+              <>
+                <Text style={styles.sectionTitle}>Recipe of the Week</Text>
+                <TouchableOpacity
+                  style={styles.featuredCard}
+                  onPress={() => router.push(`/recipe/${featuredRecipe.id}`)}
+                  dataSet={{ hover: 'card' }}
+                >
+                  {featuredRecipe.image_url ? (
+                    <LazyImage
+                      source={{ uri: featuredRecipe.image_url }}
+                      blurhash={featuredRecipe.blurhash}
+                      style={styles.featuredImage}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <View style={[styles.featuredImage, styles.featuredPlaceholder]}>
+                      <Ionicons name="restaurant-outline" size={40} color={Colors.primary} style={{ opacity: 0.3 }} />
+                    </View>
+                  )}
+                  <View style={styles.featuredOverlay}>
+                    <View style={styles.featuredBadge}>
+                      <Ionicons name="star" size={12} color={Colors.primary} />
+                      <Text style={styles.featuredBadgeText}>Featured</Text>
+                    </View>
+                    <Text style={styles.featuredTitle} numberOfLines={2}>{featuredRecipe.title}</Text>
+                    {featuredRecipe.description ? (
+                      <Text style={styles.featuredDesc} numberOfLines={2}>{featuredRecipe.description}</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+            {totalCount > 1 && (
+              <TouchableOpacity
+                style={styles.randomBtn}
+                onPress={goToRandomRecipe}
+                dataSet={{ hover: 'family' }}
+              >
+                <Ionicons name="shuffle-outline" size={22} color={Colors.primary} />
+                <Text style={styles.randomBtnText}>Surprise me! Pick a random recipe</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       {/* Family Recipes */}
       <View style={styles.section}>
         <View style={styles.contentWrap}>
@@ -494,6 +594,9 @@ export default function HomeScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+        <TouchableOpacity onPress={() => router.push('/about')} style={styles.footerLink}>
+          <Text style={styles.footerLinkText}>About</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -678,6 +781,46 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  // Featured recipe
+  featuredCard: {
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
+  },
+  featuredImage: { width: '100%', height: 180 },
+  featuredPlaceholder: { backgroundColor: Colors.secondary, alignItems: 'center', justifyContent: 'center' },
+  featuredOverlay: { padding: 14, gap: 4 },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: Colors.primary + '18',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  featuredBadgeText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
+  featuredTitle: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  featuredDesc: { fontSize: 13, color: Colors.textSecondary, lineHeight: 19 },
+  randomBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+  },
+  randomBtnText: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.primary },
+
   // Family buttons
   familyRow: { gap: 10 },
   familyButton: {
@@ -786,6 +929,8 @@ const styles = StyleSheet.create({
   viewAllText: { fontSize: 15, fontWeight: '600', color: Colors.primary },
 
   // Footer
-  footer: { alignItems: 'center', paddingVertical: 24, backgroundColor: Colors.footer },
+  footer: { alignItems: 'center', paddingVertical: 24, backgroundColor: Colors.footer, gap: 6 },
   footerText: { fontSize: 12, color: Colors.textSecondary },
+  footerLink: { paddingVertical: 4 },
+  footerLinkText: { fontSize: 13, color: Colors.primary, fontWeight: '500' },
 });
