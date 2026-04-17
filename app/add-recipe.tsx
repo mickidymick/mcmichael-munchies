@@ -18,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
 import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../lib/autocomplete';
+import { downscaleImageBlob } from '../lib/images';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import DraggableRow from '../components/DraggableRow';
@@ -309,17 +310,20 @@ export default function AddRecipeScreen() {
   async function uploadImage(uri: string, name: string): Promise<string | null> {
     try {
       const response = await fetch(uri);
-      const blob = await response.blob();
-      const mimeType = blob.type || 'image/jpeg';
+      const originalBlob = await response.blob();
+      const originalType = originalBlob.type || 'image/jpeg';
 
-      if (!ALLOWED_IMAGE_TYPES.includes(mimeType)) {
+      if (!ALLOWED_IMAGE_TYPES.includes(originalType)) {
         Alert.alert('Invalid file type', 'Please upload a JPEG, PNG, or WebP image.');
         return null;
       }
-      if (blob.size > MAX_IMAGE_SIZE) {
+      if (originalBlob.size > MAX_IMAGE_SIZE) {
         Alert.alert('File too large', 'Images must be under 5MB.');
         return null;
       }
+
+      const blob = await downscaleImageBlob(originalBlob);
+      const mimeType = blob.type || originalType;
 
       const fileExt = mimeType.split('/')[1]?.replace('jpeg', 'jpg') ?? 'jpg';
       const unique = `${name}-${crypto.randomUUID()}`;

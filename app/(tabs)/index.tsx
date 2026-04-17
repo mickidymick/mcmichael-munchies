@@ -72,7 +72,14 @@ export default function HomeScreen() {
       } else {
         if (countRes.count !== null) setTotalCount(countRes.count);
         if (recentRes.data) setRecentRecipes(recentRes.data as Recipe[]);
-        if (carouselRes.data) setCarouselRecipes(carouselRes.data as Recipe[]);
+        if (carouselRes.data) {
+          const list = carouselRes.data as Recipe[];
+          setCarouselRecipes(list);
+          // Warm the cache so carousel frames don't pop in one-by-one.
+          for (const r of list) {
+            if (r.image_url) Image.prefetch(r.image_url).catch(() => { /* ignore */ });
+          }
+        }
       }
     } catch {
       setLoadError(true);

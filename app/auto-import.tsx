@@ -20,9 +20,9 @@ import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
 import { CATEGORIES, CUISINES } from '../constants/recipes';
 import { invalidateSearchCache } from '../components/SearchBar';
+import { fetchAndDownscale, blobToBase64 } from '../lib/images';
 
 const MAX_PHOTOS = 6;
-const MAX_IMAGE_DIMENSION = 1568;
 
 type ImportedRecipe = {
   title: string;
@@ -90,20 +90,6 @@ export default function AutoImportScreen() {
   const [step, setStep] = useState<'paste' | 'importing'>('paste');
   const [promptCopied, setPromptCopied] = useState(false);
   const [savedIds, setSavedIds] = useState<string[]>([]);
-
-  function blobToBase64(blob: Blob): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Strip "data:*/*;base64," prefix
-        const comma = result.indexOf(',');
-        resolve(comma >= 0 ? result.slice(comma + 1) : result);
-      };
-      reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
-      reader.readAsDataURL(blob);
-    });
-  }
 
   function handleParse() {
     parseAndImport(jsonInput);
@@ -262,31 +248,12 @@ export default function AutoImportScreen() {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function toBase64JpegDownscaled(uri: string): Promise<{ mimeType: string; data: string }> {
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
-    // On web, downscale via canvas to keep request size / token cost reasonable.
-    if (Platform.OS === 'web') {
-      const bitmap = await createImageBitmap(blob);
-      const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
-      const w = Math.round(bitmap.width * scale);
-      const h = Math.round(bitmap.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas not supported');
-      ctx.drawImage(bitmap, 0, 0, w, h);
-      const downscaled: Blob = await new Promise((resolve, reject) =>
-        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/jpeg', 0.85),
-      );
-      const data = await blobToBase64(downscaled);
-      return { mimeType: 'image/jpeg', data };
-    }
-
+  async function toImagePart(uri: string): Promise<{ mimeType: string; data: string }> {
+    // Gemini does fine with ~1568px — a bit smaller than our upload cap to keep
+    // token cost down.
+    const { blob, mimeType } = await fetchAndDownscale(uri, { maxDimension: 1568 });
     const data = await blobToBase64(blob);
-    return { mimeType: blob.type || 'image/jpeg', data };
+    return { mimeType, data };
   }
 
   async function extractFromPhotos() {
@@ -294,7 +261,7 @@ export default function AutoImportScreen() {
     setExtracting(true);
     setParseError('');
     try {
-      const imageParts = await Promise.all(photos.map(toBase64JpegDownscaled));
+      const imageParts = await Promise.all(photos.map(toImagePart));
 
       // Use direct fetch so we can see error bodies (functions.invoke hides them on non-2xx).
       const { data: { session } } = await supabase.auth.getSession();
