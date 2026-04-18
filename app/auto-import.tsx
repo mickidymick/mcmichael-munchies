@@ -433,7 +433,7 @@ export default function AutoImportScreen() {
           <Ionicons
             name="clipboard-outline"
             size={16}
-            color={mode === 'paste' ? '#FFF' : Colors.text}
+            color={mode === 'paste' ? '#FFF' : colors.text}
           />
           <Text style={[styles.modeBtnText, mode === 'paste' && styles.modeBtnTextActive]}>
             Paste Text
@@ -529,9 +529,9 @@ export default function AutoImportScreen() {
                 <Ionicons
                   name={promptCopied ? 'checkmark' : 'copy-outline'}
                   size={16}
-                  color={promptCopied ? Colors.primary : Colors.textSecondary}
+                  color={promptCopied ? colors.primary : colors.textSecondary}
                 />
-                <Text style={[styles.copyBtnText, promptCopied && { color: Colors.primary }]}>
+                <Text style={[styles.copyBtnText, promptCopied && { color: colors.primary }]}>
                   {promptCopied ? 'Copied!' : 'Copy'}
                 </Text>
               </TouchableOpacity>
@@ -545,7 +545,7 @@ export default function AutoImportScreen() {
           <TextInput
             style={[styles.jsonInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             placeholder='Paste the full response from the AI here...'
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={jsonInput}
             onChangeText={(v) => {
               setJsonInput(v);
