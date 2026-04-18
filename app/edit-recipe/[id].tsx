@@ -447,14 +447,14 @@ export default function EditRecipeScreen() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16 }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 16 }}>
           Failed to load recipe
         </Text>
-        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
+        <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 8, textAlign: 'center' }}>
           The recipe could not be found or there was an error loading it.
         </Text>
         <TouchableOpacity
-          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          style={{ backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
           onPress={() => router.back()}
         >
           <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go Back</Text>
@@ -467,14 +467,14 @@ export default function EditRecipeScreen() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
         <Ionicons name="lock-closed-outline" size={48} color={colors.textSecondary} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 16, textAlign: 'center' }}>
           Member Access Required
         </Text>
-        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
           You need member access to edit recipes. You can request access from your profile page.
         </Text>
         <TouchableOpacity
-          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          style={{ backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
           onPress={() => router.push('/(tabs)/profile')}
         >
           <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
@@ -737,7 +737,7 @@ export default function EditRecipeScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.removeImageBtn} onPress={() => pickStepImage(i)}>
                     <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
-                    <Text style={[styles.removeImageText, { color: Colors.primary }]}>Replace</Text>
+                    <Text style={[styles.removeImageText, { color: colors.primary }]}>Replace</Text>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -126,7 +126,7 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
             onPress={() => !isFirst && setCurrentStep(currentStep - 1)}
             disabled={isFirst}
           >
-            <Ionicons name="arrow-back" size={20} color={isFirst ? Colors.textSecondary : '#FFF'} />
+            <Ionicons name="arrow-back" size={20} color={isFirst ? colors.textSecondary : '#FFF'} />
             <Text style={[cookStyles.navBtnText, isFirst && cookStyles.navBtnTextDisabled]}>Previous</Text>
           </TouchableOpacity>
 

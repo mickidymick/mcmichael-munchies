@@ -161,10 +161,10 @@ export default function PendingRequestsScreen() {
                 dataSet={{ hover: 'btn' }}
               >
                 {processing === item.id ? (
-                  <ActivityIndicator color={Colors.danger} size="small" />
+                  <ActivityIndicator color={colors.danger} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="close" size={18} color={Colors.danger} />
+                    <Ionicons name="close" size={18} color={colors.danger} />
                     <Text style={styles.denyBtnText}>Deny</Text>
                   </>
                 )}

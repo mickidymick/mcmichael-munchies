@@ -304,21 +304,21 @@ export default function AutoImportScreen() {
   }
 
   if (roleLoading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (!isMemberOrAdmin) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
-        <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors.textSecondary} />
+        <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 16, textAlign: 'center' }}>
           Member Access Required
         </Text>
-        <Text style={{ fontSize: 15, color: Colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
+        <Text style={{ fontSize: 15, color: colors.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 22 }}>
           You need member access to import recipes. You can request access from your profile page.
         </Text>
         <TouchableOpacity
-          style={{ backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
+          style={{ backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 8, marginTop: 16 }}
           onPress={() => router.push('/(tabs)/profile')}
         >
           <Text style={{ color: '#FFF', fontWeight: '600', fontSize: 15 }}>Go to Profile</Text>
@@ -351,10 +351,10 @@ export default function AutoImportScreen() {
           return (
             <View key={index} style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.statusIcon}>
-                {status === 'pending' && <Ionicons name="ellipse-outline" size={22} color={Colors.textSecondary} />}
-                {status === 'saving' && <ActivityIndicator size="small" color={Colors.primary} />}
-                {status === 'saved' && <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />}
-                {status === 'failed' && <Ionicons name="close-circle" size={22} color={Colors.danger} />}
+                {status === 'pending' && <Ionicons name="ellipse-outline" size={22} color={colors.textSecondary} />}
+                {status === 'saving' && <ActivityIndicator size="small" color={colors.primary} />}
+                {status === 'saved' && <Ionicons name="checkmark-circle" size={22} color={colors.primary} />}
+                {status === 'failed' && <Ionicons name="close-circle" size={22} color={colors.danger} />}
               </View>
               <View style={styles.statusInfo}>
                 <Text style={[styles.statusTitle, { color: colors.text }]} numberOfLines={1}>{recipe.title}</Text>
@@ -420,7 +420,7 @@ export default function AutoImportScreen() {
           <Ionicons
             name="camera-outline"
             size={16}
-            color={mode === 'photos' ? '#FFF' : Colors.text}
+            color={mode === 'photos' ? '#FFF' : colors.text}
           />
           <Text style={[styles.modeBtnText, mode === 'photos' && styles.modeBtnTextActive]}>
             Upload Photos
@@ -445,7 +445,7 @@ export default function AutoImportScreen() {
         <>
           <View style={[styles.instructionCard, { backgroundColor: colors.secondary }]}>
             <View style={styles.instructionHeader}>
-              <Ionicons name="sparkles-outline" size={24} color={Colors.primary} />
+              <Ionicons name="sparkles-outline" size={24} color={colors.primary} />
               <Text style={[styles.instructionTitle, { color: colors.text }]}>Extract from Cookbook Photos</Text>
             </View>
             <Text style={[styles.instructionText, { color: colors.text }]}>
@@ -482,7 +482,7 @@ export default function AutoImportScreen() {
 
           {parseError ? (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={16} color={Colors.danger} />
+              <Ionicons name="alert-circle" size={16} color={colors.danger} />
               <Text style={styles.errorText}>{parseError}</Text>
             </View>
           ) : null}
@@ -509,7 +509,7 @@ export default function AutoImportScreen() {
         <>
           <View style={[styles.instructionCard, { backgroundColor: colors.secondary }]}>
             <View style={styles.instructionHeader}>
-              <Ionicons name="book-outline" size={24} color={Colors.primary} />
+              <Ionicons name="book-outline" size={24} color={colors.primary} />
               <Text style={[styles.instructionTitle, { color: colors.text }]}>Import with an External AI Chat</Text>
             </View>
             <Text style={[styles.instructionText, { color: colors.text }]}>
@@ -557,7 +557,7 @@ export default function AutoImportScreen() {
 
           {parseError ? (
             <View style={styles.errorBox}>
-              <Ionicons name="alert-circle" size={16} color={Colors.danger} />
+              <Ionicons name="alert-circle" size={16} color={colors.danger} />
               <Text style={styles.errorText}>{parseError}</Text>
             </View>
           ) : null}
