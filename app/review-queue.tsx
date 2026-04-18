@@ -105,9 +105,9 @@ export default function ReviewQueueScreen() {
 
   if (error) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
-        <Text style={styles.emptyText}>Failed to load review queue.</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Failed to load review queue.</Text>
         <TouchableOpacity onPress={loadQueue}>
           <Text style={styles.emptyLink}>Try again</Text>
         </TouchableOpacity>
@@ -117,10 +117,10 @@ export default function ReviewQueueScreen() {
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Ionicons name="checkmark-circle-outline" size={64} color={colors.primary} />
-        <Text style={styles.emptyTitle}>All caught up!</Text>
-        <Text style={styles.emptyText}>No recipes to review. Import some to get started.</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>All caught up!</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No recipes to review. Import some to get started.</Text>
         <View style={styles.emptyButtons}>
           <TouchableOpacity
             style={styles.emptyBtn}
@@ -140,9 +140,9 @@ export default function ReviewQueueScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header info */}
-      <View style={styles.infoBar}>
+      <View style={[styles.infoBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.infoLeft}>
           <Text style={styles.infoCount}>{items.length}</Text>
           <Text style={styles.infoLabel}>recipe{items.length !== 1 ? 's' : ''} to review</Text>
@@ -158,7 +158,7 @@ export default function ReviewQueueScreen() {
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
           <View
-            style={styles.card}
+            style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
             dataSet={{ hover: 'card' }}
           >
             <TouchableOpacity
@@ -179,7 +179,7 @@ export default function ReviewQueueScreen() {
               <View style={styles.cardInfo}>
                 <View style={styles.cardTitleRow}>
                   <FamilyBadge family={item.recipe.family} size={18} />
-                  <Text style={styles.cardTitle} numberOfLines={1}>{item.recipe.title}</Text>
+                  <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>{item.recipe.title}</Text>
                 </View>
                 <Text style={styles.cardMeta} numberOfLines={1}>
                   {[...(item.recipe.categories ?? []), item.recipe.cuisine].filter(Boolean).join(' · ')}

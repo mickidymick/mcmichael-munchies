@@ -67,19 +67,19 @@ export default function ShoppingListScreen() {
 
   if (!userId) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Ionicons name="cart-outline" size={56} color={colors.primary} style={{ opacity: 0.4 }} />
-        <Text style={styles.emptyTitle}>Shopping List</Text>
-        <Text style={styles.emptyText}>Sign in to use your shopping list.</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>Shopping List</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Sign in to use your shopping list.</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
-          <Text style={styles.heading}>Shopping List</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>Shopping List</Text>
           <View style={styles.headerActions}>
             {checkedCount > 0 && (
               <TouchableOpacity onPress={clearChecked}>
@@ -103,7 +103,7 @@ export default function ShoppingListScreen() {
       <View style={styles.addRow}>
         <View style={styles.addRowInner}>
           <TextInput
-            style={styles.addInput}
+            style={[styles.addInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             placeholder="Add an item..."
             placeholderTextColor={colors.textSecondary}
             value={newItem}
@@ -124,10 +124,10 @@ export default function ShoppingListScreen() {
       {loading ? (
         <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : items.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
           <Ionicons name="cart-outline" size={48} color={colors.textSecondary} />
-          <Text style={styles.emptyText}>Your shopping list is empty.</Text>
-          <Text style={styles.emptySubtext}>Add items above or tap "Add to Shopping List" on any recipe.</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Your shopping list is empty.</Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Add items above or tap "Add to Shopping List" on any recipe.</Text>
         </View>
       ) : (
         <FlatList
@@ -140,14 +140,14 @@ export default function ShoppingListScreen() {
             ) : null
           }
           renderItem={({ item }) => (
-            <View style={styles.itemRow}>
+            <View style={[styles.itemRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <TouchableOpacity
                 style={[styles.checkbox, item.checked && styles.checkboxChecked]}
                 onPress={() => toggleItem(item.id, item.checked)}
               >
                 {item.checked && <Ionicons name="checkmark" size={14} color="#FFF" />}
               </TouchableOpacity>
-              <Text style={[styles.itemText, item.checked && styles.itemTextChecked]} numberOfLines={2}>
+              <Text style={[styles.itemText, { color: colors.text }, item.checked && styles.itemTextChecked]} numberOfLines={2}>
                 {item.item}
               </Text>
               <TouchableOpacity onPress={() => deleteItem(item.id)} style={styles.deleteBtn}>

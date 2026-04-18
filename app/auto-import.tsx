@@ -336,8 +336,8 @@ export default function AutoImportScreen() {
     const allSaved = allDone && failedCount === 0;
 
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.importTitle}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+        <Text style={[styles.importTitle, { color: colors.text }]}>
           {saving ? 'Importing Recipes...' : allSaved ? 'All Recipes Imported!' : 'Import Complete'}
         </Text>
         <Text style={styles.importSubtitle}>
@@ -349,7 +349,7 @@ export default function AutoImportScreen() {
         {recipes.map((recipe, index) => {
           const status = statuses[index];
           return (
-            <View key={index} style={styles.statusCard}>
+            <View key={index} style={[styles.statusCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.statusIcon}>
                 {status === 'pending' && <Ionicons name="ellipse-outline" size={22} color={Colors.textSecondary} />}
                 {status === 'saving' && <ActivityIndicator size="small" color={Colors.primary} />}
@@ -357,7 +357,7 @@ export default function AutoImportScreen() {
                 {status === 'failed' && <Ionicons name="close-circle" size={22} color={Colors.danger} />}
               </View>
               <View style={styles.statusInfo}>
-                <Text style={styles.statusTitle} numberOfLines={1}>{recipe.title}</Text>
+                <Text style={[styles.statusTitle, { color: colors.text }]} numberOfLines={1}>{recipe.title}</Text>
                 <Text style={styles.statusMeta}>
                   {recipe.ingredients.length} ingredients, {recipe.steps.length} steps
                 </Text>
@@ -410,9 +410,9 @@ export default function AutoImportScreen() {
   // ─── Paste / Upload screen ────────────────────────────────────────────────────
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
       {/* Mode toggle */}
-      <View style={styles.modeToggle}>
+      <View style={[styles.modeToggle, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.modeBtn, mode === 'photos' && styles.modeBtnActive]}
           onPress={() => setMode('photos')}
@@ -443,12 +443,12 @@ export default function AutoImportScreen() {
 
       {mode === 'photos' ? (
         <>
-          <View style={styles.instructionCard}>
+          <View style={[styles.instructionCard, { backgroundColor: colors.secondary }]}>
             <View style={styles.instructionHeader}>
               <Ionicons name="sparkles-outline" size={24} color={Colors.primary} />
-              <Text style={styles.instructionTitle}>Extract from Cookbook Photos</Text>
+              <Text style={[styles.instructionTitle, { color: colors.text }]}>Extract from Cookbook Photos</Text>
             </View>
-            <Text style={styles.instructionText}>
+            <Text style={[styles.instructionText, { color: colors.text }]}>
               Upload up to {MAX_PHOTOS} photos of recipe pages. Our vision AI will read them
               and turn them into importable recipes. Clear, well-lit photos work best.
             </Text>
@@ -507,12 +507,12 @@ export default function AutoImportScreen() {
         </>
       ) : (
         <>
-          <View style={styles.instructionCard}>
+          <View style={[styles.instructionCard, { backgroundColor: colors.secondary }]}>
             <View style={styles.instructionHeader}>
               <Ionicons name="book-outline" size={24} color={Colors.primary} />
-              <Text style={styles.instructionTitle}>Import with an External AI Chat</Text>
+              <Text style={[styles.instructionTitle, { color: colors.text }]}>Import with an External AI Chat</Text>
             </View>
-            <Text style={styles.instructionText}>
+            <Text style={[styles.instructionText, { color: colors.text }]}>
               1. Copy the prompt below using the Copy button{'\n'}
               2. Open any AI chatbot (ChatGPT, Claude, Gemini, etc.) and start a new chat{'\n'}
               3. Paste the prompt and attach photos of your cookbook pages{'\n'}
@@ -541,9 +541,9 @@ export default function AutoImportScreen() {
             </ScrollView>
           </View>
 
-          <Text style={styles.pasteLabel}>Paste the AI response here</Text>
+          <Text style={[styles.pasteLabel, { color: colors.text }]}>Paste the AI response here</Text>
           <TextInput
-            style={styles.jsonInput}
+            style={[styles.jsonInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             placeholder='Paste the full response from the AI here...'
             placeholderTextColor={Colors.textSecondary}
             value={jsonInput}

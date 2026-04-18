@@ -112,17 +112,17 @@ export default function PendingRequestsScreen() {
 
   if (requests.length === 0) {
     return (
-      <View style={styles.emptyContainer}>
+      <View style={[styles.emptyContainer, { backgroundColor: colors.background }]}>
         <Ionicons name="checkmark-circle-outline" size={64} color={colors.primary} />
-        <Text style={styles.emptyTitle}>No Pending Requests</Text>
-        <Text style={styles.emptyText}>All caught up! New requests will appear here.</Text>
+        <Text style={[styles.emptyTitle, { color: colors.text }]}>No Pending Requests</Text>
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>All caught up! New requests will appear here.</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.infoBar}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.infoBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Text style={styles.infoCount}>{requests.length}</Text>
         <Text style={styles.infoLabel}>pending request{requests.length !== 1 ? 's' : ''}</Text>
       </View>
@@ -132,7 +132,7 @@ export default function PendingRequestsScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.cardTop}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
@@ -140,7 +140,7 @@ export default function PendingRequestsScreen() {
                 </Text>
               </View>
               <View style={styles.cardInfo}>
-                <Text style={styles.cardName}>{item.profile?.full_name ?? 'Unknown'}</Text>
+                <Text style={[styles.cardName, { color: colors.text }]}>{item.profile?.full_name ?? 'Unknown'}</Text>
                 <Text style={styles.cardDate}>
                   Requested {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </Text>
@@ -148,8 +148,8 @@ export default function PendingRequestsScreen() {
             </View>
 
             {item.message && (
-              <View style={styles.messageBox}>
-                <Text style={styles.messageText}>"{item.message}"</Text>
+              <View style={[styles.messageBox, { backgroundColor: colors.secondary }]}>
+                <Text style={[styles.messageText, { color: colors.text }]}>"{item.message}"</Text>
               </View>
             )}
 

@@ -90,8 +90,8 @@ export default function CollectionDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
           {Platform.OS === 'web' && (
             <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.push('/collections')} style={styles.backBtn}>
@@ -99,9 +99,9 @@ export default function CollectionDetailScreen() {
             </TouchableOpacity>
           )}
           <View style={styles.headerText}>
-            <Text style={styles.heading}>{collection.name}</Text>
+            <Text style={[styles.heading, { color: colors.text }]}>{collection.name}</Text>
             {collection.description && (
-              <Text style={styles.subheading}>{collection.description}</Text>
+              <Text style={[styles.subheading, { color: colors.textSecondary }]}>{collection.description}</Text>
             )}
           </View>
           {isOwner && (

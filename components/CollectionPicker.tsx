@@ -76,9 +76,9 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add to Collection</Text>
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+          <View style={[styles.header, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.title, { color: colors.text }]}>Add to Collection</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
@@ -97,11 +97,11 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
                 }
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.collectionRow}
+                    style={[styles.collectionRow, { borderBottomColor: colors.border }]}
                     onPress={() => addToCollection(item.id, item.name)}
                   >
                     <Ionicons name="book-outline" size={18} color={colors.primary} />
-                    <Text style={styles.collectionName}>{item.name}</Text>
+                    <Text style={[styles.collectionName, { color: colors.text }]}>{item.name}</Text>
                     <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                   </TouchableOpacity>
                 )}
@@ -110,7 +110,7 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
               {showCreate ? (
                 <View style={styles.createRow}>
                   <TextInput
-                    style={styles.createInput}
+                    style={[styles.createInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
                     placeholder="New collection name"
                     placeholderTextColor={colors.textSecondary}
                     value={newName}

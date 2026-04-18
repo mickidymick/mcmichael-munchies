@@ -70,10 +70,10 @@ export default function CollectionsScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
-          <Text style={styles.heading}>Collections</Text>
+          <Text style={[styles.heading, { color: colors.text }]}>Collections</Text>
           <TouchableOpacity onPress={() => setShowCreate(!showCreate)}>
             <Ionicons name={showCreate ? 'close' : 'add-circle-outline'} size={24} color={colors.primary} />
           </TouchableOpacity>
@@ -81,9 +81,9 @@ export default function CollectionsScreen() {
       </View>
 
       {showCreate && (
-        <View style={styles.createCard}>
+        <View style={[styles.createCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TextInput
-            style={styles.createInput}
+            style={[styles.createInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
             placeholder="Collection name"
             placeholderTextColor={colors.textSecondary}
             value={newName}
@@ -91,7 +91,7 @@ export default function CollectionsScreen() {
             maxLength={50}
           />
           <TextInput
-            style={styles.createInput}
+            style={[styles.createInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
             placeholder="Description (optional)"
             placeholderTextColor={colors.textSecondary}
             value={newDesc}
@@ -124,7 +124,7 @@ export default function CollectionsScreen() {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={styles.collectionCard}
+              style={[styles.collectionCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => router.push(`/collection/${item.id}`)}
               dataSet={{ hover: 'card' }}
             >
@@ -132,7 +132,7 @@ export default function CollectionsScreen() {
                 <Ionicons name="book-outline" size={24} color={colors.primary} />
               </View>
               <View style={styles.collectionInfo}>
-                <Text style={styles.collectionName}>{item.name}</Text>
+                <Text style={[styles.collectionName, { color: colors.text }]}>{item.name}</Text>
                 {item.description && (
                   <Text style={styles.collectionDesc} numberOfLines={1}>{item.description}</Text>
                 )}

@@ -26,7 +26,7 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
 
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       onPress={() => router.push(`/recipe/${recipe.id}`)}
       accessibilityRole="button"
       accessibilityLabel={`View recipe: ${recipe.title}`}
@@ -69,13 +69,13 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
               <Ionicons name="bookmark" size={10} color={colors.primary} />
             </View>
           )}
-          <Text style={styles.cardTitle} numberOfLines={1}>{recipe.title}</Text>
+          <Text style={[styles.cardTitle, { color: colors.text }]} numberOfLines={1}>{recipe.title}</Text>
         </View>
-        <Text style={styles.cardMeta} numberOfLines={1}>
+        <Text style={[styles.cardMeta, { color: colors.textSecondary }]} numberOfLines={1}>
           {[...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}
         </Text>
         {(recipe.prep_time || recipe.cook_time) ? (
-          <Text style={styles.cardTime}>
+          <Text style={[styles.cardTime, { color: colors.textSecondary }]}>
             {((recipe.prep_time ?? 0) + (recipe.cook_time ?? 0))} min
             {recipe.estimated_calories ? ` · ${recipe.estimated_calories} cal` : ''}
           </Text>

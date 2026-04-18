@@ -141,7 +141,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
         left: dropdownPos.left,
         width: dropdownPos.width,
         zIndex: 99999,
-        backgroundColor: '#fff',
+        backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
         borderRadius: 10,
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -175,10 +175,10 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
 
   return (
     <View style={styles.container}>
-      <View ref={inputRef} style={styles.searchRow}>
+      <View ref={inputRef} style={[styles.searchRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
         <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={styles.icon} />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           placeholder={placeholder ?? 'Search recipes...'}
           placeholderTextColor={colors.textSecondary}
           value={value}
@@ -227,7 +227,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
                 left: dropdownPos.left,
                 width: dropdownPos.width,
                 zIndex: 99999,
-                backgroundColor: '#fff',
+                backgroundColor: colors.surface,
                 border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',

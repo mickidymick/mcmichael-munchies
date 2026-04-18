@@ -28,8 +28,8 @@ export default function EmptyState({
   return (
     <View style={styles.container}>
       <Ionicons name={icon} size={56} color={colors.primary} style={styles.icon} />
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
+      <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+      <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
       {actionLabel && onAction && (
         <TouchableOpacity style={styles.button} onPress={onAction}>
           {actionIcon && <Ionicons name={actionIcon} size={18} color="#FFF" />}

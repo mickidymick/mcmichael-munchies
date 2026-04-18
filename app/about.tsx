@@ -7,39 +7,39 @@ import { FAMILIES } from '../constants/recipes';
 export default function AboutScreen() {
   const colors = useThemeColors();
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>About McMichael Munchies</Text>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Ionicons name="heart" size={28} color={colors.primary} />
-        <Text style={styles.heading}>Our Story</Text>
-        <Text style={styles.body}>
+        <Text style={[styles.heading, { color: colors.text }]}>Our Story</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
           McMichael Munchies was created as a place where our families can save, share, and have easy access to all the amazing food we grew up with — as well as discover new favorites together.
         </Text>
-        <Text style={styles.body}>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
           From Grandma's secret recipes to that amazing dish someone brought to Thanksgiving, this is our family cookbook — digital, searchable, and always in your pocket.
         </Text>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Ionicons name="people" size={28} color={colors.primary} />
-        <Text style={styles.heading}>Our Families</Text>
-        <Text style={styles.body}>
+        <Text style={[styles.heading, { color: colors.text }]}>Our Families</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
           Recipes from across our extended family, spanning generations of home cooking:
         </Text>
         <View style={styles.familyList}>
           {FAMILIES.map((fam) => (
             <View key={fam} style={styles.familyItem}>
               <View style={styles.familyDot} />
-              <Text style={styles.familyName}>{fam}</Text>
+              <Text style={[styles.familyName, { color: colors.text }]}>{fam}</Text>
             </View>
           ))}
         </View>
       </View>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Ionicons name="restaurant" size={28} color={colors.primary} />
-        <Text style={styles.heading}>Features</Text>
+        <Text style={[styles.heading, { color: colors.text }]}>Features</Text>
         <View style={styles.featureList}>
           {[
             ['search-outline', 'Search by ingredient, category, cuisine, or tag'],
@@ -51,7 +51,7 @@ export default function AboutScreen() {
           ].map(([icon, text]) => (
             <View key={text} style={styles.featureItem}>
               <Ionicons name={icon as any} size={18} color={colors.primary} />
-              <Text style={styles.featureText}>{text}</Text>
+              <Text style={[styles.featureText, { color: colors.text }]}>{text}</Text>
             </View>
           ))}
         </View>

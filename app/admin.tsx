@@ -69,13 +69,13 @@ export default function AdminScreen() {
   if (!isAdmin) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={profiles}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <View style={styles.cardInfo}>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
@@ -83,7 +83,7 @@ export default function AdminScreen() {
                 </Text>
               </View>
               <View style={styles.nameColumn}>
-                <Text style={styles.name}>{item.full_name || 'No name'}</Text>
+                <Text style={[styles.name, { color: colors.text }]}>{item.full_name || 'No name'}</Text>
                 {item.role === 'admin' && (
                   <Text style={styles.adminBadge}>Admin</Text>
                 )}
@@ -96,6 +96,7 @@ export default function AdminScreen() {
                     key={opt.value}
                     style={[
                       styles.roleChip,
+                      { borderColor: colors.border },
                       item.role === opt.value && styles.roleChipActive,
                     ]}
                     onPress={() => changeRole(item.id, opt.value)}
@@ -103,6 +104,7 @@ export default function AdminScreen() {
                     <Text
                       style={[
                         styles.roleChipText,
+                        { color: colors.text },
                         item.role === opt.value && styles.roleChipTextActive,
                       ]}
                     >

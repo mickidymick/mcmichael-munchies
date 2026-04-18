@@ -248,9 +248,9 @@ export default function BrowseScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.heading}>Browse Recipes</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Text style={[styles.heading, { color: colors.text }]}>Browse Recipes</Text>
         <View style={styles.headerContent}>
         <SearchBar
           value={query}
@@ -273,11 +273,11 @@ export default function BrowseScreen() {
             {SORT_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.value}
-                style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
+                style={[styles.sortChip, { backgroundColor: colors.background, borderColor: colors.border }, selectedSort === opt.value && styles.sortChipActive]}
                 dataSet={{ hover: 'chip' }}
                 onPress={() => setSelectedSort(opt.value)}
               >
-                <Text style={[styles.sortChipText, selectedSort === opt.value && styles.sortChipTextActive]}>
+                <Text style={[styles.sortChipText, { color: colors.text }, selectedSort === opt.value && styles.sortChipTextActive]}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
@@ -287,7 +287,7 @@ export default function BrowseScreen() {
 
         {/* Expandable filters */}
         {showFilters && (
-          <View style={styles.filtersPanel}>
+          <View style={[styles.filtersPanel, { borderTopColor: colors.border }]}>
             <ChipRow
               label="Recipe Type"
               items={[{ label: 'Family Recipe', value: 'family_recipe' }, { label: 'Personal Favorite', value: 'personal_favorite' }]}
@@ -358,15 +358,15 @@ export default function BrowseScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={styles.resultCount}>{recipes.length} recipe{recipes.length !== 1 ? 's' : ''}{hasMore ? '+' : ''}</Text>
+            <Text style={[styles.resultCount, { color: colors.textSecondary }]}>{recipes.length} recipe{recipes.length !== 1 ? 's' : ''}{hasMore ? '+' : ''}</Text>
           }
           onEndReached={loadMore}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             <>
               {loadingMore && <ActivityIndicator style={{ paddingVertical: 16 }} color={colors.primary} />}
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+              <View style={[styles.footer, { backgroundColor: colors.footer }]}>
+                <Text style={[styles.footerText, { color: colors.textSecondary }]}>McMichael Munchies. Recipes from our home to yours.</Text>
               </View>
             </>
           }

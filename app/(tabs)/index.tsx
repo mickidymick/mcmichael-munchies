@@ -223,10 +223,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header — mobile only (web uses NavBar) */}
       {Platform.OS !== 'web' && (
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View style={styles.headerTop}>
             <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
             {isMemberOrAdmin && (
@@ -408,25 +408,25 @@ export default function HomeScreen() {
       {/* Intro */}
       <View style={styles.intro}>
         <View style={styles.contentWrap}>
-          <Text style={styles.introTitle}>McMichael Munchies</Text>
-          <Text style={styles.introText}>
+          <Text style={[styles.introTitle, { color: colors.text }]}>McMichael Munchies</Text>
+          <Text style={[styles.introText, { color: colors.textSecondary }]}>
             Family recipes, personal favorites, and tasty treats from the McMichaels, Murthas, Elmores, and Rosses — all in one place.
           </Text>
           {totalCount > 0 && (
-            <View style={styles.statsRow}>
+            <View style={[styles.statsRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{totalCount}</Text>
-                <Text style={styles.statLabel}>{totalCount === 1 ? 'Recipe' : 'Recipes'}</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{totalCount === 1 ? 'Recipe' : 'Recipes'}</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{FAMILIES.length}</Text>
-                <Text style={styles.statLabel}>Families</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Families</Text>
               </View>
-              <View style={styles.statDivider} />
+              <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
               <View style={styles.statItem}>
                 <Text style={styles.statNumber}>{CATEGORY_ICONS.length}</Text>
-                <Text style={styles.statLabel}>Categories</Text>
+                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Categories</Text>
               </View>
             </View>
           )}
@@ -439,9 +439,9 @@ export default function HomeScreen() {
           <View style={styles.contentWrap}>
             {featuredRecipe && (
               <>
-                <Text style={styles.sectionTitle}>Recipe of the Week</Text>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Recipe of the Week</Text>
                 <TouchableOpacity
-                  style={styles.featuredCard}
+                  style={[styles.featuredCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => router.push(`/recipe/${featuredRecipe.id}`)}
                   dataSet={{ hover: 'card' }}
                 >
@@ -462,9 +462,9 @@ export default function HomeScreen() {
                       <Ionicons name="star" size={12} color={colors.primary} />
                       <Text style={styles.featuredBadgeText}>Featured</Text>
                     </View>
-                    <Text style={styles.featuredTitle} numberOfLines={2}>{featuredRecipe.title}</Text>
+                    <Text style={[styles.featuredTitle, { color: colors.text }]} numberOfLines={2}>{featuredRecipe.title}</Text>
                     {featuredRecipe.description ? (
-                      <Text style={styles.featuredDesc} numberOfLines={2}>{featuredRecipe.description}</Text>
+                      <Text style={[styles.featuredDesc, { color: colors.textSecondary }]} numberOfLines={2}>{featuredRecipe.description}</Text>
                     ) : null}
                   </View>
                 </TouchableOpacity>
@@ -472,7 +472,7 @@ export default function HomeScreen() {
             )}
             {totalCount > 1 && (
               <TouchableOpacity
-                style={styles.randomBtn}
+                style={[styles.randomBtn, { backgroundColor: colors.surface }]}
                 onPress={goToRandomRecipe}
                 dataSet={{ hover: 'family' }}
               >
@@ -488,12 +488,12 @@ export default function HomeScreen() {
       {/* Family Recipes */}
       <View style={styles.section}>
         <View style={styles.contentWrap}>
-          <Text style={styles.sectionTitle}>Family Recipes</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Family Recipes</Text>
           <View style={styles.familyRow}>
             {FAMILIES.map((fam) => (
               <TouchableOpacity
                 key={fam}
-                style={styles.familyButton}
+                style={[styles.familyButton, { backgroundColor: colors.surface }]}
                 onPress={() => router.push({ pathname: '/browse', params: { family: fam, recipe_type: 'family_recipe' } })}
                 dataSet={{ hover: 'family' }}
               >
@@ -518,17 +518,17 @@ export default function HomeScreen() {
       {/* Categories - compact chip style */}
       <View style={styles.section}>
         <View style={styles.contentWrap}>
-          <Text style={styles.sectionTitle}>Explore by Category</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Explore by Category</Text>
           <View style={styles.categoryChipGrid}>
             {CATEGORY_ICONS.map((cat) => (
               <TouchableOpacity
                 key={cat.label}
-                style={styles.categoryChip}
+                style={[styles.categoryChip, { backgroundColor: colors.secondary }]}
                 onPress={() => router.push({ pathname: '/browse', params: { category: cat.label } })}
                 dataSet={{ hover: 'catChip' }}
               >
                 <Ionicons name={cat.icon} size={16} color={colors.primary} />
-                <Text style={styles.categoryChipLabel}>{cat.label}</Text>
+                <Text style={[styles.categoryChipLabel, { color: colors.text }]}>{cat.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -539,19 +539,19 @@ export default function HomeScreen() {
       {loading ? (
         <View style={styles.section}>
           <View style={styles.contentWrap}>
-            <Text style={styles.sectionTitle}>Recently Added</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Recently Added</Text>
             <HomeGridSkeleton />
           </View>
         </View>
       ) : recentRecipes.length > 0 ? (
         <View style={styles.section}>
           <View style={styles.contentWrap}>
-            <Text style={styles.sectionTitle}>Recently Added</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Recently Added</Text>
             <View style={styles.recipeGrid}>
               {recentRecipes.map((recipe) => (
                 <TouchableOpacity
                   key={recipe.id}
-                  style={styles.recipeCard}
+                  style={[styles.recipeCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => router.push(`/recipe/${recipe.id}`)}
                   dataSet={{ hover: 'card' }}
                 >
@@ -573,9 +573,9 @@ export default function HomeScreen() {
                   <View style={styles.recipeCardInfo}>
                     <View style={styles.recipeCardTitleRow}>
                       <FamilyBadge family={recipe.family} size={22} />
-                      <Text style={styles.recipeCardTitle} numberOfLines={2}>{recipe.title}</Text>
+                      <Text style={[styles.recipeCardTitle, { color: colors.text }]} numberOfLines={2}>{recipe.title}</Text>
                     </View>
-                    <Text style={styles.recipeCardMeta} numberOfLines={1}>
+                    <Text style={[styles.recipeCardMeta, { color: colors.textSecondary }]} numberOfLines={1}>
                       {[...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}
                     </Text>
                   </View>
@@ -594,8 +594,8 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+      <View style={[styles.footer, { backgroundColor: colors.footer }]}>
+        <Text style={[styles.footerText, { color: colors.textSecondary }]}>McMichael Munchies. Recipes from our home to yours.</Text>
         <TouchableOpacity onPress={() => router.push('/about')} style={styles.footerLink}>
           <Text style={styles.footerLinkText}>About</Text>
         </TouchableOpacity>

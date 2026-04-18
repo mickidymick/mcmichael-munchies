@@ -84,10 +84,14 @@ function useWebDarkMode() {
       // Override all hardcoded light-mode colors from StyleSheet.create blocks
       // by targeting the exact hex values React Native Web inlines
       style.textContent = `
+        /* Expo/RNW root background */
+        [style*="background-color: rgb(242, 242, 242)"] { background-color: #1a1a1a !important; }
+        /* App light colors */
         [style*="background-color: rgb(255, 253, 248)"] { background-color: #1a1a1a !important; }
         [style*="background-color: rgb(255, 255, 255)"] { background-color: #242424 !important; }
         [style*="background-color: rgb(255, 232, 204)"] { background-color: #3d2e1e !important; }
         [style*="background-color: rgb(255, 242, 225)"] { background-color: #2a2218 !important; }
+        [style*="background-color: rgb(255, 212, 161)"] { background-color: #4a3828 !important; }
         [style*="background-color: rgb(224, 216, 206)"] { background-color: #3a3a3a !important; }
         [style*="color: rgb(51, 51, 51)"] { color: #e8e8e8 !important; }
         [style*="color: rgb(119, 119, 119)"] { color: #999999 !important; }

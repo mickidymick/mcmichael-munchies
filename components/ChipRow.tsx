@@ -13,7 +13,7 @@ export default function ChipRow({ label, items, selected, onToggle }: Props) {
   const colors = useThemeColors();
   return (
     <View style={styles.section}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       <View style={styles.wrap}>
         {items.map((item) => {
           const value = typeof item === 'string' ? item : item.value;
@@ -22,14 +22,14 @@ export default function ChipRow({ label, items, selected, onToggle }: Props) {
           return (
             <TouchableOpacity
               key={value}
-              style={[styles.chip, isActive && styles.chipActive]}
+              style={[styles.chip, { backgroundColor: colors.background, borderColor: colors.border }, isActive && styles.chipActive]}
               onPress={() => onToggle(value)}
               accessibilityRole="button"
               accessibilityLabel={`${chipLabel} filter`}
               accessibilityState={{ selected: isActive }}
               dataSet={{ hover: 'chip' }}
             >
-              <Text style={[styles.chipText, isActive && styles.chipTextActive]}>
+              <Text style={[styles.chipText, { color: colors.text }, isActive && styles.chipTextActive]}>
                 {chipLabel}
               </Text>
             </TouchableOpacity>

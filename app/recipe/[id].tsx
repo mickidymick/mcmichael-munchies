@@ -614,7 +614,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 
     <ScrollView
       ref={scrollRef}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
       onScroll={(e) => setShowScrollTop(e.nativeEvent.contentOffset.y > 400)}
       scrollEventThrottle={200}
@@ -655,12 +655,12 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
         </View>
       )}
 
-      <View style={styles.body} nativeID="recipe-printable">
+      <View style={[styles.body]} nativeID="recipe-printable">
         {/* Title row */}
         <View style={styles.titleRow}>
           <View style={styles.titleWithBadge}>
             <FamilyBadge family={recipe.family} size={36} />
-            <Text style={styles.title}>{recipe.title}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>{recipe.title}</Text>
           </View>
           <View style={styles.titleActions}>
             <Tooltip label={linkCopied ? 'Copied!' : Platform.OS === 'web' ? 'Copy link' : 'Share'}>
@@ -731,7 +731,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
         </View>
 
         {/* Meta */}
-        <Text style={styles.meta}>{[recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}</Text>
+        <Text style={[styles.meta, { color: colors.textSecondary }]}>{[recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ')}</Text>
 
         {(recipe.recipe_type === 'personal_favorite' || addedByName) && (
           <View style={styles.attribution}>
@@ -749,33 +749,33 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 
         {/* Time & Servings */}
         {(recipe.prep_time || recipe.cook_time || recipe.servings || recipe.estimated_calories) && (
-          <View style={styles.infoBar}>
+          <View style={[styles.infoBar, { backgroundColor: colors.secondary }]}>
             {recipe.prep_time != null && (
               <View style={styles.infoItem}>
                 <Ionicons name="timer-outline" size={18} color={Colors.primary} />
-                <Text style={styles.infoLabel}>Prep</Text>
-                <Text style={styles.infoValue}>{recipe.prep_time} min</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Prep</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{recipe.prep_time} min</Text>
               </View>
             )}
             {recipe.cook_time != null && (
               <View style={styles.infoItem}>
                 <Ionicons name="flame-outline" size={18} color={Colors.primary} />
-                <Text style={styles.infoLabel}>Cook</Text>
-                <Text style={styles.infoValue}>{recipe.cook_time} min</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Cook</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{recipe.cook_time} min</Text>
               </View>
             )}
             {scaledServings > 0 && (
               <View style={styles.infoItem}>
                 <Ionicons name="people-outline" size={18} color={Colors.primary} />
-                <Text style={styles.infoLabel}>Servings</Text>
-                <Text style={styles.infoValue}>{scaledServings}</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Servings</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{scaledServings}</Text>
               </View>
             )}
             {scaledCalories != null && (
               <View style={styles.infoItem}>
                 <Ionicons name="nutrition-outline" size={18} color={Colors.primary} />
-                <Text style={styles.infoLabel}>Calories</Text>
-                <Text style={styles.infoValue}>{scaledCalories}</Text>
+                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Calories</Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>{scaledCalories}</Text>
                 {scaledServings > 0 && (
                   <Text style={styles.infoSub}>{Math.round(scaledCalories / scaledServings)}/serving</Text>
                 )}
@@ -806,13 +806,13 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
         )}
 
         {recipe.description ? (
-          <Text style={styles.description}>{recipe.description}</Text>
+          <Text style={[styles.description, { color: colors.textSecondary }]}>{recipe.description}</Text>
         ) : null}
 
         {recipe.notes ? (
-          <View style={styles.notesBox}>
+          <View style={[styles.notesBox, { backgroundColor: colors.secondary }]}>
             <Ionicons name="document-text-outline" size={16} color={Colors.primary} />
-            <Text style={styles.notesText}>{recipe.notes}</Text>
+            <Text style={[styles.notesText, { color: colors.text }]}>{recipe.notes}</Text>
           </View>
         ) : null}
 
@@ -832,7 +832,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
         {recipe.ingredients?.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Ingredients</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Ingredients</Text>
               {checkedIngredients.size > 0 && (
                 <TouchableOpacity onPress={() => setCheckedIngredients(new Set())}>
                   <Text style={styles.resetCheckText}>Reset</Text>
@@ -852,7 +852,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                   <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
                     {checked && <Ionicons name="checkmark" size={12} color="#FFF" />}
                   </View>
-                  <Text style={[styles.ingredientText, checked && styles.ingredientTextChecked]}>
+                  <Text style={[styles.ingredientText, { color: colors.text }, checked && styles.ingredientTextChecked]}>
                     {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
                   </Text>
                 </TouchableOpacity>
@@ -882,7 +882,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
         {/* Steps */}
         {hasSteps && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Instructions</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Instructions</Text>
             {recipe.steps
               .sort((a, b) => a.order - b.order)
               .map((step, i) => (
@@ -891,7 +891,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                     <Text style={styles.stepNumberText}>{i + 1}</Text>
                   </View>
                   <View style={styles.stepContent}>
-                    <Text style={styles.stepText}>{step.instruction}</Text>
+                    <Text style={[styles.stepText, { color: colors.text }]}>{step.instruction}</Text>
                     {step.image_url && (
                       <Image source={{ uri: step.image_url }} style={styles.stepImage} />
                     )}
@@ -903,12 +903,12 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 
         {/* Comments */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Comments</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Comments</Text>
           {comments.length === 0 && (
             <Text style={styles.noComments}>No comments yet. Be the first!</Text>
           )}
           {comments.map((c) => (
-            <View key={c.id} style={styles.commentCard}>
+            <View key={c.id} style={[styles.commentCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={styles.commentHeader}>
                 <View style={styles.commentAvatar}>
                   <Text style={styles.commentAvatarText}>
@@ -916,7 +916,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                   </Text>
                 </View>
                 <View style={styles.commentMeta}>
-                  <Text style={styles.commentAuthor}>{c.profiles?.full_name ?? 'Unknown'}</Text>
+                  <Text style={[styles.commentAuthor, { color: colors.text }]}>{c.profiles?.full_name ?? 'Unknown'}</Text>
                   <Text style={styles.commentDate}>
                     {new Date(c.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </Text>
@@ -927,15 +927,15 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                   </TouchableOpacity>
                 )}
               </View>
-              <Text style={styles.commentBody}>{c.body}</Text>
+              <Text style={[styles.commentBody, { color: colors.text }]}>{c.body}</Text>
             </View>
           ))}
           {userId ? (
             <View style={styles.commentInput}>
               <TextInput
-                style={styles.commentTextInput}
+                style={[styles.commentTextInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 placeholder="Add a comment..."
-                placeholderTextColor={Colors.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={commentText}
                 onChangeText={setCommentText}
                 multiline
@@ -986,10 +986,10 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
     )}
     {showDeleteConfirm && (
       <View style={styles.deleteOverlay}>
-        <View style={styles.deleteModal}>
+        <View style={[styles.deleteModal, { backgroundColor: colors.surface }]}>
           <Ionicons name="warning-outline" size={40} color={Colors.danger} />
-          <Text style={styles.deleteModalTitle}>Delete Recipe?</Text>
-          <Text style={styles.deleteModalText}>
+          <Text style={[styles.deleteModalTitle, { color: colors.text }]}>Delete Recipe?</Text>
+          <Text style={[styles.deleteModalText, { color: colors.textSecondary }]}>
             This will permanently delete "{recipe.title}". This cannot be undone.
           </Text>
           <View style={styles.deleteModalButtons}>

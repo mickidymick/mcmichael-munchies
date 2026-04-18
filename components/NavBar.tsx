@@ -36,7 +36,7 @@ export default function NavBar() {
   if (Platform.OS !== 'web') return null;
 
   return (
-    <View style={styles.nav}>
+    <View style={[styles.nav, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
       <View style={styles.inner}>
         <TouchableOpacity onPress={() => router.push('/(tabs)/')}>
           <Image
@@ -54,7 +54,7 @@ export default function NavBar() {
             return (
               <TouchableOpacity
                 key={link.label}
-                style={[styles.link, isActive && styles.linkActive]}
+                style={[styles.link, isActive && [styles.linkActive, { backgroundColor: colors.secondary }]]}
                 onPress={() => { router.push(link.href as any); setMenuOpen(false); }}
                 accessibilityRole="link"
                 accessibilityLabel={link.label}
@@ -64,7 +64,7 @@ export default function NavBar() {
                 {isCompact ? (
                   <Ionicons name={link.icon} size={22} color={isActive ? colors.primary : colors.text} />
                 ) : (
-                  <Text style={[styles.linkText, isActive && styles.linkTextActive]}>
+                  <Text style={[styles.linkText, { color: colors.text }, isActive && styles.linkTextActive]}>
                     {link.label}
                   </Text>
                 )}
@@ -84,20 +84,20 @@ export default function NavBar() {
                 <Ionicons name={menuOpen ? 'close' : 'menu'} size={24} color={colors.primary} />
               </TouchableOpacity>
               {menuOpen && (
-                <View style={styles.dropdown}>
+                <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => { router.push('/add-recipe'); setMenuOpen(false); }}
                   >
                     <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
-                    <Text style={styles.dropdownText}>Add Recipe</Text>
+                    <Text style={[styles.dropdownText, { color: colors.text }]}>Add Recipe</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => { router.push('/auto-import'); setMenuOpen(false); }}
                   >
                     <Ionicons name="documents-outline" size={18} color={colors.primary} />
-                    <Text style={styles.dropdownText}>Auto Import</Text>
+                    <Text style={[styles.dropdownText, { color: colors.text }]}>Auto Import</Text>
                   </TouchableOpacity>
                 </View>
               )}

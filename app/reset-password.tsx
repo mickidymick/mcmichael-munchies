@@ -59,7 +59,7 @@ export default function ResetPasswordScreen() {
 
   if (checking) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
@@ -67,10 +67,10 @@ export default function ResetPasswordScreen() {
 
   if (success) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.card}>
-          <Text style={styles.title}>Password Updated!</Text>
-          <Text style={styles.text}>
+          <Text style={[styles.title, { color: colors.text }]}>Password Updated!</Text>
+          <Text style={[styles.text, { color: colors.textSecondary }]}>
             Your password has been changed successfully. You can now sign in with your new password.
           </Text>
           <TouchableOpacity
@@ -90,10 +90,10 @@ export default function ResetPasswordScreen() {
 
   if (!hasSession) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.card}>
-          <Text style={styles.title}>Invalid or Expired Link</Text>
-          <Text style={styles.text}>
+          <Text style={[styles.title, { color: colors.text }]}>Invalid or Expired Link</Text>
+          <Text style={[styles.text, { color: colors.textSecondary }]}>
             This password reset link is no longer valid. Please request a new one.
           </Text>
           <TouchableOpacity
@@ -111,11 +111,11 @@ export default function ResetPasswordScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Set New Password</Text>
-        <Text style={styles.text}>Enter your new password below.</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Set New Password</Text>
+        <Text style={[styles.text, { color: colors.textSecondary }]}>Enter your new password below.</Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="New password"
           placeholderTextColor={colors.textSecondary}
           value={password}
@@ -123,7 +123,7 @@ export default function ResetPasswordScreen() {
           secureTextEntry
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="Confirm new password"
           placeholderTextColor={colors.textSecondary}
           value={confirm}

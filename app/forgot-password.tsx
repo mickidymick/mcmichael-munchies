@@ -38,10 +38,10 @@ export default function ForgotPasswordScreen() {
 
   if (sent) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.card}>
-          <Text style={styles.title}>Check Your Email</Text>
-          <Text style={styles.text}>
+          <Text style={[styles.title, { color: colors.text }]}>Check Your Email</Text>
+          <Text style={[styles.text, { color: colors.textSecondary }]}>
             We sent a password reset link to <Text style={styles.emailHighlight}>{email}</Text>. Click the link in the email to set a new password.
           </Text>
           <TouchableOpacity
@@ -58,13 +58,13 @@ export default function ForgotPasswordScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Forgot Password</Text>
-        <Text style={styles.text}>
+        <Text style={[styles.title, { color: colors.text }]}>Forgot Password</Text>
+        <Text style={[styles.text, { color: colors.textSecondary }]}>
           Enter your email address and we'll send you a link to reset your password.
         </Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="Email"
           placeholderTextColor={colors.textSecondary}
           value={email}

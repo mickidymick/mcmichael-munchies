@@ -9,11 +9,11 @@ export default function NotFoundScreen() {
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Ionicons name="restaurant-outline" size={64} color={colors.primary} />
       <Text style={styles.code}>404</Text>
-      <Text style={styles.title}>Page Not Found</Text>
-      <Text style={styles.subtitle}>
+      <Text style={[styles.title, { color: colors.text }]}>Page Not Found</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         This recipe must have gotten lost in the kitchen.
       </Text>
       <TouchableOpacity

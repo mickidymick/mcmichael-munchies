@@ -153,10 +153,10 @@ export default function FavoritesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View style={styles.headerContent}>
-            <Text style={styles.heading}>Favorites</Text>
+            <Text style={[styles.heading, { color: colors.text }]}>Favorites</Text>
           </View>
         </View>
         <View style={styles.skeletonList}>
@@ -191,10 +191,10 @@ export default function FavoritesScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <View style={styles.headerContent}>
-        <Text style={styles.heading}>Favorites</Text>
+        <Text style={[styles.heading, { color: colors.text }]}>Favorites</Text>
         <SearchBar
           value={query}
           onChangeText={setQuery}
@@ -214,11 +214,11 @@ export default function FavoritesScreen() {
             {SORT_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.value}
-                style={[styles.sortChip, selectedSort === opt.value && styles.sortChipActive]}
+                style={[styles.sortChip, { backgroundColor: colors.background, borderColor: colors.border }, selectedSort === opt.value && styles.sortChipActive]}
                 dataSet={{ hover: 'chip' }}
                 onPress={() => setSelectedSort(opt.value)}
               >
-                <Text style={[styles.sortChipText, selectedSort === opt.value && styles.sortChipTextActive]}>
+                <Text style={[styles.sortChipText, { color: colors.text }, selectedSort === opt.value && styles.sortChipTextActive]}>
                   {opt.label}
                 </Text>
               </TouchableOpacity>
@@ -250,7 +250,7 @@ export default function FavoritesScreen() {
       </View>
 
       {staleWarning && (
-        <TouchableOpacity style={styles.staleBanner} onPress={loadFavorites}>
+        <TouchableOpacity style={[styles.staleBanner, { backgroundColor: colors.secondary }]} onPress={loadFavorites}>
           <Ionicons name="cloud-offline-outline" size={16} color={colors.primary} />
           <Text style={styles.staleBannerText}>Showing cached data. Tap to retry.</Text>
         </TouchableOpacity>
@@ -286,11 +286,11 @@ export default function FavoritesScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           ListHeaderComponent={
-            <Text style={styles.resultCount}>{filtered.length} favorite{filtered.length !== 1 ? 's' : ''}</Text>
+            <Text style={[styles.resultCount, { color: colors.textSecondary }]}>{filtered.length} favorite{filtered.length !== 1 ? 's' : ''}</Text>
           }
           ListFooterComponent={
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+            <View style={[styles.footer, { backgroundColor: colors.footer }]}>
+              <Text style={[styles.footerText, { color: colors.textSecondary }]}>McMichael Munchies. Recipes from our home to yours.</Text>
             </View>
           }
           renderItem={({ item }) => <RecipeCard recipe={item} isFavorited />}

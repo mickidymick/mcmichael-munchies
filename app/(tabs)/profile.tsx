@@ -230,28 +230,28 @@ export default function ProfileScreen() {
     const memberSince = user.created_at ? formatDate(user.created_at) : null;
 
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <Text style={styles.heading}>Profile</Text>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+          <Text style={[styles.heading, { color: colors.text }]}>Profile</Text>
         </View>
 
         {/* Profile card */}
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <TouchableOpacity onPress={pickAvatar} style={styles.avatarWrap}>
             <UserAvatar name={displayName} avatarUrl={avatarUrl} size={80} />
             <View style={styles.avatarEditBadge}>
               <Ionicons name="camera" size={12} color="#FFF" />
             </View>
           </TouchableOpacity>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.email}>{user.email}</Text>
-          <View style={styles.roleBadge}>
+          <Text style={[styles.name, { color: colors.text }]}>{displayName}</Text>
+          <Text style={[styles.email, { color: colors.textSecondary }]}>{user.email}</Text>
+          <View style={[styles.roleBadge, { backgroundColor: colors.secondary }]}>
             <Text style={styles.roleBadgeText}>
               {role === 'admin' ? 'Admin' : role === 'member' ? 'Family Member' : 'Viewer'}
             </Text>
           </View>
           {memberSince && (
-            <Text style={styles.memberSince}>Member since {memberSince}</Text>
+            <Text style={[styles.memberSince, { color: colors.textSecondary }]}>Member since {memberSince}</Text>
           )}
         </View>
 
@@ -311,33 +311,33 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <TouchableOpacity
-            style={styles.statCard}
+            style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/browse')}
             dataSet={{ hover: 'card' }}
           >
             <Ionicons name="book-outline" size={24} color={colors.primary} />
             <Text style={styles.statNumber}>{recipesAdded}</Text>
-            <Text style={styles.statLabel}>Recipes Added</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Recipes Added</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.statCard}
+            style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/favorites')}
             dataSet={{ hover: 'card' }}
           >
             <Ionicons name="heart-outline" size={24} color={colors.primary} />
             <Text style={styles.statNumber}>{favoritesCount}</Text>
-            <Text style={styles.statLabel}>Favorites</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Favorites</Text>
           </TouchableOpacity>
         </View>
 
         {/* Quick actions */}
         <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Actions</Text>
 
           {isMemberOrAdmin && (
             <>
               <TouchableOpacity
-                style={styles.actionRow}
+                style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => router.push('/add-recipe')}
                 dataSet={{ hover: 'family' }}
               >
@@ -345,14 +345,14 @@ export default function ProfileScreen() {
                   <Ionicons name="add-circle-outline" size={22} color={colors.primary} />
                 </View>
                 <View style={styles.actionTextCol}>
-                  <Text style={styles.actionTitle}>Add a Recipe</Text>
-                  <Text style={styles.actionDesc}>Add a new recipe to the collection</Text>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>Add a Recipe</Text>
+                  <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>Add a new recipe to the collection</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.actionRow}
+                style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => router.push('/auto-import')}
                 dataSet={{ hover: 'family' }}
               >
@@ -360,15 +360,15 @@ export default function ProfileScreen() {
                   <Ionicons name="documents-outline" size={22} color={colors.primary} />
                 </View>
                 <View style={styles.actionTextCol}>
-                  <Text style={styles.actionTitle}>Auto Import</Text>
-                  <Text style={styles.actionDesc}>Import recipes from a cookbook using AI</Text>
+                  <Text style={[styles.actionTitle, { color: colors.text }]}>Auto Import</Text>
+                  <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>Import recipes from a cookbook using AI</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
 
               {reviewCount > 0 && (
                 <TouchableOpacity
-                  style={styles.actionRow}
+                  style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   onPress={() => router.push('/review-queue')}
                   dataSet={{ hover: 'family' }}
                 >
@@ -376,8 +376,8 @@ export default function ProfileScreen() {
                     <Ionicons name="clipboard-outline" size={22} color="#FFF" />
                   </View>
                   <View style={styles.actionTextCol}>
-                    <Text style={styles.actionTitle}>Review Queue</Text>
-                    <Text style={styles.actionDesc}>{reviewCount} imported recipe{reviewCount !== 1 ? 's' : ''} to review</Text>
+                    <Text style={[styles.actionTitle, { color: colors.text }]}>Review Queue</Text>
+                    <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>{reviewCount} imported recipe{reviewCount !== 1 ? 's' : ''} to review</Text>
                   </View>
                   <View style={styles.reviewBadge}>
                     <Text style={styles.reviewBadgeText}>{reviewCount}</Text>
@@ -397,8 +397,8 @@ export default function ProfileScreen() {
               <Ionicons name="search-outline" size={22} color={colors.primary} />
             </View>
             <View style={styles.actionTextCol}>
-              <Text style={styles.actionTitle}>Browse Recipes</Text>
-              <Text style={styles.actionDesc}>Search and filter all recipes</Text>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>Browse Recipes</Text>
+              <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>Search and filter all recipes</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -412,8 +412,8 @@ export default function ProfileScreen() {
               <Ionicons name="heart-outline" size={22} color={colors.primary} />
             </View>
             <View style={styles.actionTextCol}>
-              <Text style={styles.actionTitle}>My Favorites</Text>
-              <Text style={styles.actionDesc}>View your saved recipes</Text>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>My Favorites</Text>
+              <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>View your saved recipes</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -429,8 +429,8 @@ export default function ProfileScreen() {
                 <Ionicons name="shield-outline" size={22} color={colors.primary} />
               </View>
               <View style={styles.actionTextCol}>
-                <Text style={styles.actionTitle}>Manage Members</Text>
-                <Text style={styles.actionDesc}>Approve and manage family members</Text>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Manage Members</Text>
+                <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>Approve and manage family members</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -444,8 +444,8 @@ export default function ProfileScreen() {
                 <Ionicons name="mail-outline" size={22} color={pendingRequestCount > 0 ? '#FFF' : colors.primary} />
               </View>
               <View style={styles.actionTextCol}>
-                <Text style={styles.actionTitle}>Pending Requests</Text>
-                <Text style={styles.actionDesc}>
+                <Text style={[styles.actionTitle, { color: colors.text }]}>Pending Requests</Text>
+                <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
                   {pendingRequestCount > 0
                     ? `${pendingRequestCount} request${pendingRequestCount !== 1 ? 's' : ''} waiting for review`
                     : 'No pending requests'}
@@ -464,12 +464,12 @@ export default function ProfileScreen() {
 
         {/* Theme */}
         <View style={styles.actionsSection}>
-          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
           <View style={styles.themeRow}>
             {(['system', 'light', 'dark'] as const).map((opt) => (
               <TouchableOpacity
                 key={opt}
-                style={[styles.themeBtn, themeMode === opt && styles.themeBtnActive]}
+                style={[styles.themeBtn, { backgroundColor: colors.surface, borderColor: colors.border }, themeMode === opt && styles.themeBtnActive]}
                 onPress={() => setThemeMode(opt)}
               >
                 <Ionicons
@@ -487,7 +487,7 @@ export default function ProfileScreen() {
 
         {/* Sign out */}
         <TouchableOpacity
-          style={styles.logoutButton}
+          style={[styles.logoutButton, { borderColor: colors.border }]}
           onPress={handleLogout}
           dataSet={{ hover: 'btn' }}
         >
@@ -495,8 +495,8 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
 
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
+        <View style={[styles.footer, { backgroundColor: colors.footer }]}>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>McMichael Munchies. Recipes from our home to yours.</Text>
         </View>
       </ScrollView>
     );
@@ -506,30 +506,30 @@ export default function ProfileScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.authContainer}>
         <Text style={styles.authTitle}>McMichael Munchies</Text>
-        <Text style={styles.authSubtitle}>
+        <Text style={[styles.authSubtitle, { color: colors.textSecondary }]}>
           {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
         </Text>
 
         {/* @ts-ignore */}
-        <TouchableOpacity style={styles.oauthButton} onPress={() => handleOAuth('google')} dataSet={{ hover: 'btn' }}>
+        <TouchableOpacity style={[styles.oauthButton, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => handleOAuth('google')} dataSet={{ hover: 'btn' }}>
           <Ionicons name="logo-google" size={20} color="#EA4335" />
-          <Text style={styles.oauthText}>Continue with Google</Text>
+          <Text style={[styles.oauthText, { color: colors.text }]}>Continue with Google</Text>
         </TouchableOpacity>
 
         <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
+          <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
         {mode === 'signup' && (
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             placeholder="Your name"
             placeholderTextColor={colors.textSecondary}
             value={name}

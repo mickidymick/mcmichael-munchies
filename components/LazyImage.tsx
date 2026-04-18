@@ -15,7 +15,7 @@ export default function LazyImage({ blurhash, ...props }: LazyImageProps) {
 
   if (error || !props.source) {
     return (
-      <View style={[styles.fallback, props.style as any]}>
+      <View style={[styles.fallback, { backgroundColor: colors.secondary }, props.style as any]}>
         <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
       </View>
     );

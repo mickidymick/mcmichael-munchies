@@ -36,8 +36,9 @@ export default function Skeleton({ width, height, borderRadius = 8, style }: Pro
 }
 
 export function RecipeCardSkeleton() {
+  const colors = useThemeColors();
   return (
-    <View style={skStyles.card}>
+    <View style={[skStyles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <Skeleton width={120} height={68} borderRadius={0} />
       <View style={skStyles.info}>
         <Skeleton width="70%" height={14} />
@@ -59,10 +60,11 @@ export function CarouselSkeleton() {
 }
 
 export function HomeGridSkeleton() {
+  const colors = useThemeColors();
   return (
     <View style={skStyles.grid}>
       {[0, 1, 2, 3].map((i) => (
-        <View key={i} style={skStyles.gridCard}>
+        <View key={i} style={[skStyles.gridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Skeleton width="100%" height={120} borderRadius={0} />
           <View style={skStyles.gridInfo}>
             <Skeleton width="80%" height={14} />
