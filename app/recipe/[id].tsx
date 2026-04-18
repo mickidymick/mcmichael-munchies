@@ -509,35 +509,53 @@ export default function RecipeDetailScreen() {
       style.id = styleId;
       document.head.appendChild(style);
     }
-    style.textContent = `
-      @media print {
-        /* Force all containers to expand for multi-page printing */
-        * {
-          overflow: visible !important;
-          height: auto !important;
-          max-height: none !important;
-          position: static !important;
-        }
+    // Build a clean printable HTML document and open it in a new window
+    const ings = (recipe.ingredients ?? []).map((ing) =>
+      [ing.amount, ing.unit, ing.item].filter(Boolean).join(' ')
+    );
+    const steps = (recipe.steps ?? []).sort((a, b) => a.order - b.order);
+    const meta = [recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ');
+    const totalTime = ((recipe.prep_time ?? 0) + (recipe.cook_time ?? 0));
 
-        /* Hide nav, scroll-to-top, toast, and other chrome */
-        [data-hover="nav"], [data-hover="btn"] { display: none !important; }
-        nav, header { display: none !important; }
+    const html = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>${recipe.title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 650px; margin: 0 auto; padding: 24px; color: #333; line-height: 1.5; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .meta { color: #777; font-size: 13px; margin-bottom: 12px; }
+  .info { display: flex; gap: 20px; background: #f9f3ec; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+  .info div { text-align: center; }
+  .info .label { font-size: 11px; color: #777; }
+  .info .value { font-size: 15px; font-weight: bold; }
+  .description { color: #555; font-style: italic; margin-bottom: 16px; }
+  h2 { font-size: 18px; border-bottom: 2px solid #c47c30; padding-bottom: 6px; margin: 20px 0 12px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .step { display: flex; gap: 12px; margin-bottom: 16px; }
+  .step-num { width: 28px; height: 28px; border-radius: 14px; background: #c47c30; color: #fff; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-text { flex: 1; }
+  .notes { background: #f9f3ec; border-radius: 8px; padding: 12px; font-style: italic; margin-top: 16px; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<h1>${recipe.title}</h1>
+<div class="meta">${meta}</div>
+${totalTime > 0 || recipe.servings ? `<div class="info">
+  ${recipe.prep_time ? `<div><div class="label">Prep</div><div class="value">${recipe.prep_time} min</div></div>` : ''}
+  ${recipe.cook_time ? `<div><div class="label">Cook</div><div class="value">${recipe.cook_time} min</div></div>` : ''}
+  ${recipe.servings ? `<div><div class="label">Servings</div><div class="value">${recipe.servings}</div></div>` : ''}
+  ${recipe.estimated_calories ? `<div><div class="label">Calories</div><div class="value">${recipe.estimated_calories}</div></div>` : ''}
+</div>` : ''}
+${recipe.description ? `<div class="description">${recipe.description}</div>` : ''}
+${ings.length ? `<h2>Ingredients</h2><ul>${ings.map((i) => `<li>${i}</li>`).join('')}</ul>` : ''}
+${steps.length ? `<h2>Instructions</h2>${steps.map((s, i) => `<div class="step"><div class="step-num">${i + 1}</div><div class="step-text">${s.instruction}</div></div>`).join('')}` : ''}
+${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
+</body></html>`;
 
-        /* Style the printable area */
-        #recipe-printable {
-          display: block !important;
-          font-family: Georgia, serif;
-          padding: 20px;
-          color: #333 !important;
-          max-width: 700px;
-          margin: 0 auto;
-        }
-
-        #recipe-printable * { color: #333 !important; }
-        #recipe-printable img { max-width: 100%; page-break-inside: avoid; }
-        #recipe-printable div { page-break-inside: avoid; }
-      }
-    `;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.onload = () => { printWindow.print(); };
     window.print();
   }
 
