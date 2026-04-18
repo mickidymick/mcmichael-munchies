@@ -32,7 +32,7 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
       accessibilityLabel={`View recipe: ${recipe.title}`}
       dataSet={{ hover: 'card' }}
     >
-      <View style={styles.imageWrap}>
+      <View style={[styles.imageWrap, { backgroundColor: colors.secondary }]}>
         {recipe.image_url ? (
           <LazyImage
             source={{ uri: recipe.image_url }}
