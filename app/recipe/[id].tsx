@@ -82,7 +82,7 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
                 {checkedIngs.size}/{ingredients.length}
               </Text>
             </View>
-            <ScrollView style={cookStyles.ingredientsList} showsVerticalScrollIndicator={false}>
+            <ScrollView style={cookStyles.ingredientsList} showsVerticalScrollIndicator={true} persistentScrollbar={true}>
               {ingredients.map((ing, i) => {
                 const checked = checkedIngs.has(i);
                 return (
