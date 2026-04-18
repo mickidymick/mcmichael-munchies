@@ -387,7 +387,8 @@ export default function EditRecipeScreen() {
 
     let imageUrl: string | null = heroImage;
     let blurhash: string | null = null;
-    if (heroImage && (heroImage.startsWith('blob:') || heroImage.startsWith('file://'))) {
+    const isStorageUrl = heroImage?.includes('supabase.co/storage');
+    if (heroImage && !isStorageUrl) {
       const uploadResult = await uploadImage(heroImage, `hero-${Date.now()}`);
       if (uploadResult) {
         imageUrl = uploadResult.url;

@@ -372,7 +372,9 @@ export default function AddRecipeScreen() {
     let imageUrl: string | null = null;
     let blurhash: string | null = null;
     if (heroImage) {
-      if (heroImage.startsWith('blob:') || heroImage.startsWith('file://')) {
+      // If it's a local/blob URI or an external URL (AI/stock), upload to storage
+      const isStorageUrl = heroImage.includes('supabase.co/storage');
+      if (!isStorageUrl) {
         const uploadResult = await uploadImage(heroImage, `hero-${Date.now()}`);
         if (uploadResult) {
           imageUrl = uploadResult.url;
