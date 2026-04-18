@@ -502,20 +502,12 @@ export default function RecipeDetailScreen() {
 
   function handlePrint() {
     if (Platform.OS !== 'web' || !recipe) return;
-    const styleId = 'print-recipe-style';
-    let style = document.getElementById(styleId) as HTMLStyleElement | null;
-    if (!style) {
-      style = document.createElement('style');
-      style.id = styleId;
-      document.head.appendChild(style);
-    }
-    // Build a clean printable HTML document and open it in a new window
+
     const ings = (recipe.ingredients ?? []).map((ing) =>
       [ing.amount, ing.unit, ing.item].filter(Boolean).join(' ')
     );
     const steps = (recipe.steps ?? []).sort((a, b) => a.order - b.order);
     const meta = [recipe.family, ...(recipe.categories ?? []), recipe.cuisine].filter(Boolean).join(' · ');
-    const totalTime = ((recipe.prep_time ?? 0) + (recipe.cook_time ?? 0));
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>${recipe.title}</title>
@@ -531,15 +523,14 @@ export default function RecipeDetailScreen() {
   h2 { font-size: 18px; border-bottom: 2px solid #c47c30; padding-bottom: 6px; margin: 20px 0 12px; }
   ul { padding-left: 20px; }
   li { margin-bottom: 6px; }
-  .step { display: flex; gap: 12px; margin-bottom: 16px; }
+  .step { display: flex; gap: 12px; margin-bottom: 16px; page-break-inside: avoid; }
   .step-num { width: 28px; height: 28px; border-radius: 14px; background: #c47c30; color: #fff; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .step-text { flex: 1; }
   .notes { background: #f9f3ec; border-radius: 8px; padding: 12px; font-style: italic; margin-top: 16px; }
-  @media print { body { padding: 0; } }
 </style></head><body>
 <h1>${recipe.title}</h1>
 <div class="meta">${meta}</div>
-${totalTime > 0 || recipe.servings ? `<div class="info">
+${recipe.prep_time || recipe.cook_time || recipe.servings || recipe.estimated_calories ? `<div class="info">
   ${recipe.prep_time ? `<div><div class="label">Prep</div><div class="value">${recipe.prep_time} min</div></div>` : ''}
   ${recipe.cook_time ? `<div><div class="label">Cook</div><div class="value">${recipe.cook_time} min</div></div>` : ''}
   ${recipe.servings ? `<div><div class="label">Servings</div><div class="value">${recipe.servings}</div></div>` : ''}
@@ -551,12 +542,21 @@ ${steps.length ? `<h2>Instructions</h2>${steps.map((s, i) => `<div class="step">
 ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 </body></html>`;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.onload = () => { printWindow.print(); };
-    window.print();
+    // Print via hidden iframe — no extra window needed
+    const frameId = 'print-recipe-frame';
+    let frame = document.getElementById(frameId) as HTMLIFrameElement | null;
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.id = frameId;
+      frame.style.cssText = 'position:fixed;top:-10000px;left:-10000px;width:0;height:0;border:none;';
+      document.body.appendChild(frame);
+    }
+    const doc = frame.contentDocument ?? frame.contentWindow?.document;
+    if (!doc) return;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => { frame!.contentWindow?.print(); }, 300);
   }
 
   function toggleIngredientCheck(index: number) {
