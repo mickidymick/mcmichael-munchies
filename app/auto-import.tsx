@@ -454,8 +454,8 @@ export default function AutoImportScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.uploadBtn} onPress={pickPhotos} disabled={extracting}>
-            <Ionicons name="image-outline" size={20} color={Colors.primary} />
+          <TouchableOpacity style={[styles.uploadBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={pickPhotos} disabled={extracting}>
+            <Ionicons name="image-outline" size={20} color={colors.primary} />
             <Text style={styles.uploadBtnText}>
               {photos.length === 0 ? 'Select photos' : `Add more (${photos.length}/${MAX_PHOTOS})`}
             </Text>

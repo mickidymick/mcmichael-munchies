@@ -460,7 +460,7 @@ export default function AddRecipeScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
 
         {/* Hero image */}
         <TouchableOpacity style={styles.heroPickerButton} onPress={pickHeroImage}>
