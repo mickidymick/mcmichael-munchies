@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
@@ -26,10 +28,14 @@ function enhancePrompt(prompt: string): string {
 
 export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: Props) {
   const colors = useThemeColors();
+  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const [prompt, setPrompt] = useState(initialPrompt);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Scale preview to fit available space
+  const previewSize = Math.min(screenWidth * 0.8, screenHeight * 0.35, 360);
 
   async function generate() {
     const trimmed = prompt.trim();
@@ -78,70 +84,78 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Prompt</Text>
-        <TextInput
-          style={styles.input}
-          value={prompt}
-          onChangeText={setPrompt}
-          placeholder="Describe the dish..."
-          placeholderTextColor={colors.textSecondary}
-          multiline
-          numberOfLines={2}
-        />
-        <Text style={styles.hint}>We add styling cues automatically (food photography, plating, lighting).</Text>
+        <ScrollView
+          style={styles.scrollBody}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.label}>Prompt</Text>
+          <TextInput
+            style={styles.input}
+            value={prompt}
+            onChangeText={setPrompt}
+            placeholder="Describe the dish..."
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            numberOfLines={2}
+          />
+          <Text style={styles.hint}>We add styling cues automatically (food photography, plating, lighting).</Text>
 
-        <View style={styles.previewArea}>
-          {!imageUrl && !loading && !error && (
-            <View style={styles.previewPlaceholder}>
-              <Ionicons name="sparkles-outline" size={32} color={colors.textSecondary} />
-              <Text style={styles.placeholderText}>Click Generate to create an image</Text>
-            </View>
-          )}
+          <View style={[styles.previewArea, { width: previewSize, height: previewSize }]}>
+            {!imageUrl && !loading && !error && (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="sparkles-outline" size={32} color={colors.textSecondary} />
+                <Text style={styles.placeholderText}>Tap Generate to create an image</Text>
+              </View>
+            )}
 
-          {error && (
-            <View style={styles.previewPlaceholder}>
-              <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
+            {error && (
+              <View style={styles.previewPlaceholder}>
+                <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
-          {loading && (
-            <View style={styles.previewPlaceholder}>
-              <ActivityIndicator color={colors.primary} size="large" />
-              <Text style={styles.placeholderText}>Generating... (5–15s)</Text>
-            </View>
-          )}
+            {loading && (
+              <View style={styles.previewPlaceholder}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={styles.placeholderText}>Generating... (5-15s)</Text>
+              </View>
+            )}
 
-          {imageUrl && !loading && !error && (
-            <View style={styles.imageWrap}>
+            {imageUrl && !loading && !error && (
               <Image source={{ uri: imageUrl }} style={styles.preview} resizeMode="cover" />
-            </View>
-          )}
-        </View>
+            )}
+          </View>
+        </ScrollView>
 
-        <View style={styles.buttons}>
-          <TouchableOpacity
-            style={[styles.secondaryBtn, (loading || !prompt.trim()) && styles.disabledBtn]}
-            onPress={generate}
-            disabled={loading || !prompt.trim()}
-          >
-            <Ionicons name={imageUrl ? 'refresh' : 'sparkles'} size={16} color={colors.primary} />
-            <Text style={styles.secondaryBtnText}>{imageUrl ? 'Regenerate' : 'Generate'}</Text>
-          </TouchableOpacity>
-          {imageUrl && !error && (
+        {/* Buttons always pinned at bottom */}
+        <View style={styles.footer}>
+          <View style={styles.buttons}>
             <TouchableOpacity
-              style={[styles.primaryBtn, loading && styles.disabledBtn]}
-              onPress={() => onSelect(imageUrl)}
-              disabled={loading}
+              style={[styles.secondaryBtn, (loading || !prompt.trim()) && styles.disabledBtn]}
+              onPress={generate}
+              disabled={loading || !prompt.trim()}
             >
-              <Text style={styles.primaryBtnText}>Use this photo</Text>
+              <Ionicons name={imageUrl ? 'refresh' : 'sparkles'} size={16} color={colors.primary} />
+              <Text style={styles.secondaryBtnText}>{imageUrl ? 'Regenerate' : 'Generate'}</Text>
             </TouchableOpacity>
-          )}
-        </View>
+            {imageUrl && !error && (
+              <TouchableOpacity
+                style={[styles.primaryBtn, loading && styles.disabledBtn]}
+                onPress={() => onSelect(imageUrl)}
+                disabled={loading}
+              >
+                <Text style={styles.primaryBtnText}>Use this photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
-        <TouchableOpacity onPress={() => Linking.openURL('https://pollinations.ai')}>
-          <Text style={styles.attribution}>Powered by Pollinations.ai</Text>
-        </TouchableOpacity>
+          <TouchableOpacity onPress={() => Linking.openURL('https://pollinations.ai')}>
+            <Text style={styles.attribution}>Powered by Pollinations.ai</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -162,15 +176,24 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: Colors.surface,
     borderRadius: 16,
-    padding: 20,
     width: '94%',
-    maxWidth: 600,
+    maxWidth: 500,
     maxHeight: '90%',
-    gap: 10,
+    overflow: 'hidden',
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
   title: { fontSize: 18, fontWeight: '700', color: Colors.text },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.text, marginTop: 4 },
+  scrollBody: { flexShrink: 1 },
+  scrollContent: { padding: 16, gap: 8 },
+  label: { fontSize: 13, fontWeight: '600', color: Colors.text },
   input: {
     borderWidth: 1,
     borderColor: Colors.border,
@@ -180,29 +203,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: Colors.text,
     backgroundColor: Colors.background,
-    minHeight: 60,
+    minHeight: 50,
     textAlignVertical: 'top',
   },
   hint: { fontSize: 11, color: Colors.textSecondary, fontStyle: 'italic' },
-  previewArea: { width: '100%', maxWidth: 380, aspectRatio: 1, alignSelf: 'center', backgroundColor: Colors.border, borderRadius: 10, overflow: 'hidden' },
+  previewArea: {
+    alignSelf: 'center',
+    backgroundColor: Colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
   previewPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16 },
   placeholderText: { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
   errorText: { fontSize: 13, color: Colors.danger, textAlign: 'center' },
-  imageWrap: { flex: 1, position: 'relative' },
   preview: { width: '100%', height: '100%' } as any,
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    gap: 8,
+  footer: {
+    padding: 16,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    gap: 10,
   },
-  loadingText: { fontSize: 13, color: '#FFF', fontWeight: '600' },
-  buttons: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  buttons: { flexDirection: 'row', gap: 10 },
   secondaryBtn: {
     flex: 1,
     flexDirection: 'row',
