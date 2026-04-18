@@ -33,6 +33,7 @@ import { DIETARY_ICONS } from '../../constants/recipes';
 
 function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFactor: number; onClose: () => void }) {
   useKeepAwake();
+  const colors = useThemeColors();
   const steps = (recipe.steps ?? []).sort((a, b) => a.order - b.order);
   const ingredients = recipe.ingredients ?? [];
   const [currentStep, setCurrentStep] = useState(0);
@@ -56,29 +57,29 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
 
   return (
     <Modal visible animationType="slide" statusBarTranslucent>
-      <View style={cookStyles.container}>
+      <View style={[cookStyles.container, { backgroundColor: colors.background }]}>
         {/* Header */}
-        <View style={cookStyles.header}>
+        <View style={[cookStyles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={onClose} style={cookStyles.closeBtn}>
-            <Ionicons name="close" size={24} color={Colors.text} />
+            <Ionicons name="close" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={cookStyles.headerTitle} numberOfLines={1}>{recipe.title}</Text>
+          <Text style={[cookStyles.headerTitle, { color: colors.text }]} numberOfLines={1}>{recipe.title}</Text>
           <TouchableOpacity
             onPress={() => setShowIngredients(!showIngredients)}
             style={cookStyles.ingredientsToggle}
           >
-            <Ionicons name={showIngredients ? 'chevron-up' : 'list-outline'} size={22} color={Colors.primary} />
+            <Ionicons name={showIngredients ? 'chevron-up' : 'list-outline'} size={22} color={colors.primary} />
           </TouchableOpacity>
         </View>
 
         {/* Ingredients checklist — always visible, collapsible */}
         {showIngredients && ingredients.length > 0 && (
-          <View style={cookStyles.ingredientsPanel}>
+          <View style={[cookStyles.ingredientsPanel, { backgroundColor: colors.secondary, borderBottomColor: colors.border }]}>
             <View style={cookStyles.ingredientsHeader}>
-              <Text style={cookStyles.ingredientsPanelTitle}>
+              <Text style={[cookStyles.ingredientsPanelTitle, { color: colors.text }]}>
                 Ingredients{scaleFactor !== 1 ? ` (${scaleFactor}x)` : ''}
               </Text>
-              <Text style={cookStyles.ingredientsCount}>
+              <Text style={[cookStyles.ingredientsCount, { color: colors.textSecondary }]}>
                 {checkedIngs.size}/{ingredients.length}
               </Text>
             </View>
@@ -92,10 +93,10 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
                     onPress={() => toggleIng(i)}
                     activeOpacity={0.6}
                   >
-                    <View style={[cookStyles.checkbox, checked && cookStyles.checkboxChecked]}>
+                    <View style={[cookStyles.checkbox, { borderColor: colors.border }, checked && cookStyles.checkboxChecked]}>
                       {checked && <Ionicons name="checkmark" size={12} color="#FFF" />}
                     </View>
-                    <Text style={[cookStyles.ingredientItem, checked && cookStyles.ingredientItemChecked]}>
+                    <Text style={[cookStyles.ingredientItem, { color: colors.text }, checked && cookStyles.ingredientItemChecked]}>
                       {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
                     </Text>
                   </TouchableOpacity>
@@ -111,15 +112,15 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
           contentContainerStyle={cookStyles.bodyContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={cookStyles.stepCounter}>Step {currentStep + 1} of {steps.length}</Text>
-          <Text style={cookStyles.stepText}>{step.instruction}</Text>
+          <Text style={[cookStyles.stepCounter, { color: colors.primary }]}>Step {currentStep + 1} of {steps.length}</Text>
+          <Text style={[cookStyles.stepText, { color: colors.text }]}>{step.instruction}</Text>
           {step.image_url && (
             <Image source={{ uri: step.image_url }} style={cookStyles.stepImage} resizeMode="cover" />
           )}
         </ScrollView>
 
         {/* Navigation */}
-        <View style={cookStyles.nav}>
+        <View style={[cookStyles.nav, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
           <TouchableOpacity
             style={[cookStyles.navBtn, isFirst && cookStyles.navBtnDisabled]}
             onPress={() => !isFirst && setCurrentStep(currentStep - 1)}
@@ -589,7 +590,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
   if (error || !recipe) {
     return (
       <View style={styles.loader}>
-        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
+        <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
         <Text style={styles.errorText}>
           {error ? 'Failed to load recipe.' : 'Recipe not found.'}
         </Text>
@@ -626,7 +627,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
             style={styles.backLink}
             onPress={() => router.canGoBack() ? router.back() : router.push('/(tabs)/browse')}
           >
-            <Ionicons name="arrow-back" size={16} color={Colors.primary} />
+            <Ionicons name="arrow-back" size={16} color={colors.primary} />
             <Text style={styles.backLinkText}>Back to recipes</Text>
           </TouchableOpacity>
         </View>
@@ -638,19 +639,19 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
           <Image source={{ uri: recipe.image_url }} style={styles.heroImage} resizeMode="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
           {recipe.is_ai_generated ? (
             <View style={styles.stockBadge} accessibilityLabel="AI generated — replace with your own">
-              <Ionicons name="sparkles" size={14} color={Colors.textSecondary} />
+              <Ionicons name="sparkles" size={14} color={colors.textSecondary} />
               <Text style={styles.stockBadgeText}>AI generated</Text>
             </View>
           ) : recipe.is_stock_image ? (
             <View style={styles.stockBadge} accessibilityLabel="Stock photo — replace with your own">
-              <MaterialCommunityIcons name="camera-off" size={14} color={Colors.textSecondary} />
+              <MaterialCommunityIcons name="camera-off" size={14} color={colors.textSecondary} />
               <Text style={styles.stockBadgeText}>Stock photo</Text>
             </View>
           ) : null}
         </View>
       ) : (
         <View style={[styles.heroImage, styles.heroPlaceholder]}>
-          <Ionicons name="restaurant-outline" size={48} color={Colors.primary} style={{ opacity: 0.3 }} />
+          <Ionicons name="restaurant-outline" size={48} color={colors.primary} style={{ opacity: 0.3 }} />
           <Text style={styles.heroPlaceholderTitle} numberOfLines={2}>{recipe.title}</Text>
         </View>
       )}
@@ -675,7 +676,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
             {Platform.OS === 'web' && (
               <Tooltip label="Print recipe">
                 <TouchableOpacity onPress={handlePrint} style={styles.actionButton}>
-                  <Ionicons name="print-outline" size={20} color={Colors.textSecondary} />
+                  <Ionicons name="print-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </Tooltip>
             )}
@@ -683,7 +684,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
               <>
                 <Tooltip label="Edit recipe">
                   <TouchableOpacity onPress={() => router.push(`/edit-recipe/${recipe.id}`)} style={styles.actionButton}>
-                    <Ionicons name="pencil-outline" size={20} color={Colors.primary} />
+                    <Ionicons name="pencil-outline" size={20} color={colors.primary} />
                   </TouchableOpacity>
                 </Tooltip>
                 <Tooltip label="Delete recipe">
@@ -707,7 +708,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                   }}
                   style={styles.actionButton}
                 >
-                  <Ionicons name="star-outline" size={20} color={Colors.primary} />
+                  <Ionicons name="star-outline" size={20} color={colors.primary} />
                 </TouchableOpacity>
               </Tooltip>
             )}
@@ -723,7 +724,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
             {userId && (
               <Tooltip label="Add to collection">
                 <TouchableOpacity onPress={() => setShowCollectionPicker(true)} style={styles.actionButton}>
-                  <Ionicons name="book-outline" size={20} color={Colors.textSecondary} />
+                  <Ionicons name="book-outline" size={20} color={colors.textSecondary} />
                 </TouchableOpacity>
               </Tooltip>
             )}
@@ -737,7 +738,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
           <View style={styles.attribution}>
             {recipe.recipe_type === 'personal_favorite' && (
               <View style={styles.favoriteBadge}>
-                <Ionicons name="bookmark" size={12} color={Colors.primary} />
+                <Ionicons name="bookmark" size={12} color={colors.primary} />
                 <Text style={styles.favoriteBadgeText}>Personal Favorite</Text>
               </View>
             )}
@@ -752,28 +753,28 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
           <View style={[styles.infoBar, { backgroundColor: colors.secondary }]}>
             {recipe.prep_time != null && (
               <View style={styles.infoItem}>
-                <Ionicons name="timer-outline" size={18} color={Colors.primary} />
+                <Ionicons name="timer-outline" size={18} color={colors.primary} />
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Prep</Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>{recipe.prep_time} min</Text>
               </View>
             )}
             {recipe.cook_time != null && (
               <View style={styles.infoItem}>
-                <Ionicons name="flame-outline" size={18} color={Colors.primary} />
+                <Ionicons name="flame-outline" size={18} color={colors.primary} />
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Cook</Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>{recipe.cook_time} min</Text>
               </View>
             )}
             {scaledServings > 0 && (
               <View style={styles.infoItem}>
-                <Ionicons name="people-outline" size={18} color={Colors.primary} />
+                <Ionicons name="people-outline" size={18} color={colors.primary} />
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Servings</Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>{scaledServings}</Text>
               </View>
             )}
             {scaledCalories != null && (
               <View style={styles.infoItem}>
-                <Ionicons name="nutrition-outline" size={18} color={Colors.primary} />
+                <Ionicons name="nutrition-outline" size={18} color={colors.primary} />
                 <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Calories</Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>{scaledCalories}</Text>
                 {scaledServings > 0 && (
@@ -811,7 +812,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 
         {recipe.notes ? (
           <View style={[styles.notesBox, { backgroundColor: colors.secondary }]}>
-            <Ionicons name="document-text-outline" size={16} color={Colors.primary} />
+            <Ionicons name="document-text-outline" size={16} color={colors.primary} />
             <Text style={[styles.notesText, { color: colors.text }]}>{recipe.notes}</Text>
           </View>
         ) : null}
@@ -872,7 +873,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                 }}
                 dataSet={{ hover: 'btn' }}
               >
-                <Ionicons name="cart-outline" size={16} color={Colors.primary} />
+                <Ionicons name="cart-outline" size={16} color={colors.primary} />
                 <Text style={styles.addToListText}>Add to Shopping List</Text>
               </TouchableOpacity>
             )}
@@ -923,7 +924,7 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
                 </View>
                 {c.user_id === userId && (
                   <TouchableOpacity onPress={() => deleteComment(c.id)} style={styles.commentDelete}>
-                    <Ionicons name="trash-outline" size={14} color={Colors.textSecondary} />
+                    <Ionicons name="trash-outline" size={14} color={colors.textSecondary} />
                   </TouchableOpacity>
                 )}
               </View>
