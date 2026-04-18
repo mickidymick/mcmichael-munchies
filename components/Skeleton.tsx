@@ -50,8 +50,9 @@ export function RecipeCardSkeleton() {
 }
 
 export function CarouselSkeleton() {
+  const colors = useThemeColors();
   return (
-    <View style={skStyles.carousel}>
+    <View style={[skStyles.carousel, { backgroundColor: colors.background }]}>
       {[0, 1, 2].map((i) => (
         <Skeleton key={i} width={300} height={220} borderRadius={12} />
       ))}

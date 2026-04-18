@@ -254,16 +254,17 @@ const cookStyles = StyleSheet.create({
 const SCALE_OPTIONS = [0.5, 1, 2, 3];
 
 function ScaleButtons({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const colors = useThemeColors();
   return (
     <View style={scaleStyles.row}>
       {SCALE_OPTIONS.map((s) => (
         <TouchableOpacity
           key={s}
-          style={[scaleStyles.btn, value === s && scaleStyles.btnActive]}
+          style={[scaleStyles.btn, { backgroundColor: colors.background, borderColor: colors.border }, value === s && scaleStyles.btnActive]}
           onPress={() => onChange(s)}
           dataSet={{ hover: 'chip' }}
         >
-          <Text style={[scaleStyles.btnText, value === s && scaleStyles.btnTextActive]}>
+          <Text style={[scaleStyles.btnText, { color: colors.text }, value === s && scaleStyles.btnTextActive]}>
             {s === 1 ? '1x' : `${s}x`}
           </Text>
         </TouchableOpacity>
@@ -571,8 +572,8 @@ ${recipe.notes ? `<div class="notes">${recipe.notes}</div>` : ''}
 
   if (loading) {
     return (
-      <View style={styles.outerWrap}>
-        <View style={styles.skeletonWrap}>
+      <View style={[styles.outerWrap, { backgroundColor: colors.background }]}>
+        <View style={[styles.skeletonWrap, { backgroundColor: colors.background }]}>
           <Skeleton width="100%" height={200} borderRadius={12} />
           <View style={styles.skeletonBody}>
             <Skeleton width="70%" height={24} />
