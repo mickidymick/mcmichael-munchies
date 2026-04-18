@@ -503,7 +503,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.familyButton, styles.favoriteButton]}
+              style={[styles.familyButton, styles.favoriteButton, { backgroundColor: colors.surface }]}
               onPress={() => router.push({ pathname: '/browse', params: { recipe_type: 'personal_favorite' } })}
               dataSet={{ hover: 'family' }}
             >
@@ -621,7 +621,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  logo: { height: 52, width: 180 },
+  logo: { height: 52, width: 52, borderRadius: 26 },
   addButton: { padding: 4 },
   webSearchContainer: {
     paddingHorizontal: 20,

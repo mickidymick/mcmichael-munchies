@@ -145,8 +145,8 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  logo: { height: 56, width: 190 },
-  logoCompact: { height: 40, width: 130 },
+  logo: { height: 56, width: 56, borderRadius: 28 },
+  logoCompact: { height: 40, width: 40, borderRadius: 20 },
   links: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   link: {
     paddingHorizontal: 12,

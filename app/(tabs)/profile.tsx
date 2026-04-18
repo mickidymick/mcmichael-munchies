@@ -389,7 +389,7 @@ export default function ProfileScreen() {
           )}
 
           <TouchableOpacity
-            style={styles.actionRow}
+            style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/browse')}
             dataSet={{ hover: 'family' }}
           >
@@ -404,7 +404,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionRow}
+            style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/favorites')}
             dataSet={{ hover: 'family' }}
           >
@@ -421,7 +421,7 @@ export default function ProfileScreen() {
           {isAdmin && (
             <>
             <TouchableOpacity
-              style={styles.actionRow}
+              style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => router.push('/admin')}
               dataSet={{ hover: 'family' }}
             >
@@ -436,7 +436,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.actionRow}
+              style={[styles.actionRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
               onPress={() => router.push('/pending-requests')}
               dataSet={{ hover: 'family' }}
             >
