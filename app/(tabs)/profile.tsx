@@ -55,26 +55,32 @@ export default function ProfileScreen() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+      setUser(data?.user ?? null);
       setLoading(false);
     }).catch(() => {
       setLoading(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
 
-    // Real-time subscription for access requests so admin sees new requests immediately
-    const channel = supabase
-      .channel('access-requests-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, () => {
-        refreshStats();
-      })
-      .subscribe();
+    let listener: { subscription: { unsubscribe: () => void } } | null = null;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    try {
+      const authListener = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+      listener = authListener.data;
+
+      channel = supabase
+        .channel('access-requests-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'access_requests' }, () => {
+          refreshStats();
+        })
+        .subscribe();
+    } catch { /* ignore subscription errors */ }
 
     return () => {
-      listener.subscription.unsubscribe();
-      supabase.removeChannel(channel);
+      try { listener?.subscription?.unsubscribe(); } catch {}
+      try { if (channel) supabase.removeChannel(channel); } catch {}
     };
   }, []);
 

@@ -8,27 +8,30 @@ export function useUserRole() {
 
   useEffect(() => {
     loadRole();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      loadRole();
-    });
-    return () => listener.subscription.unsubscribe();
+    let listener: { subscription: { unsubscribe: () => void } } | null = null;
+    try {
+      listener = supabase.auth.onAuthStateChange(() => { loadRole(); }).data;
+    } catch {}
+    return () => { try { listener?.subscription?.unsubscribe(); } catch {} };
   }, []);
 
   async function loadRole() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setRole(null);
-      setUserId(null);
-      setLoading(false);
-      return;
-    }
-    setUserId(user.id);
-    const { data } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    setRole(data?.role ?? 'viewer');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setRole(null);
+        setUserId(null);
+        setLoading(false);
+        return;
+      }
+      setUserId(user.id);
+      const { data } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setRole(data?.role ?? 'viewer');
+    } catch { /* network error — keep previous state */ }
     setLoading(false);
   }
 
