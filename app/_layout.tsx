@@ -91,6 +91,10 @@ function useWebHoverStyles() {
         [data-hover="catChip"] { transition: transform 0.1s ease, box-shadow 0.1s ease; }
         [data-hover="catChip"]:hover { transform: scale(1.08); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
       }
+      [data-scroll="always"] { overflow-y: auto !important; }
+      [data-scroll="always"]::-webkit-scrollbar { width: 6px; }
+      [data-scroll="always"]::-webkit-scrollbar-track { background: transparent; }
+      [data-scroll="always"]::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); border-radius: 3px; }
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
