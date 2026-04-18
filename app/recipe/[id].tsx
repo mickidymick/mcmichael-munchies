@@ -511,34 +511,31 @@ export default function RecipeDetailScreen() {
     }
     style.textContent = `
       @media print {
-        /* Hide everything except the recipe */
-        body * { visibility: hidden; }
-        #recipe-printable, #recipe-printable * { visibility: visible; color: #333 !important; }
-
-        /* Break out of scroll containers and fixed positioning */
-        html, body { height: auto !important; overflow: visible !important; }
-        body > div, body > div > div, body > div > div > div {
-          height: auto !important; overflow: visible !important;
-          position: static !important; display: block !important;
+        /* Force all containers to expand for multi-page printing */
+        * {
+          overflow: visible !important;
+          height: auto !important;
+          max-height: none !important;
+          position: static !important;
         }
 
+        /* Hide nav, scroll-to-top, toast, and other chrome */
+        [data-hover="nav"], [data-hover="btn"] { display: none !important; }
+        nav, header { display: none !important; }
+
+        /* Style the printable area */
         #recipe-printable {
-          position: absolute; left: 0; top: 0; width: 100%;
-          font-family: Georgia, serif; padding: 24px; color: #333;
-          max-width: 700px; margin: 0 auto;
-          height: auto !important; overflow: visible !important;
+          display: block !important;
+          font-family: Georgia, serif;
+          padding: 20px;
+          color: #333 !important;
+          max-width: 700px;
+          margin: 0 auto;
         }
 
-        /* Image handling */
+        #recipe-printable * { color: #333 !important; }
         #recipe-printable img { max-width: 100%; page-break-inside: avoid; }
-
-        /* Prevent cutting content mid-element */
-        #recipe-printable div, #recipe-printable p, #recipe-printable span {
-          page-break-inside: avoid; orphans: 3; widows: 3;
-        }
-
-        /* Clean up backgrounds for print */
-        #recipe-printable [style*="background"] { background: transparent !important; }
+        #recipe-printable div { page-break-inside: avoid; }
       }
     `;
     window.print();
