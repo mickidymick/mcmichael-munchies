@@ -432,13 +432,13 @@ export default function AddRecipeScreen() {
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   if (roleLoading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (!isMemberOrAdmin) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <Ionicons name="lock-closed-outline" size={48} color={Colors.textSecondary} />
+        <Ionicons name="lock-closed-outline" size={48} color={colors.textSecondary} />
         <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.text, marginTop: 16, textAlign: 'center' }}>
           Member Access Required
         </Text>
@@ -467,46 +467,46 @@ export default function AddRecipeScreen() {
           {heroImage ? (
             <Image source={{ uri: heroImage }} style={styles.heroPreview} />
           ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="camera-outline" size={32} color={Colors.textSecondary} />
-              <Text style={styles.heroPlaceholderText}>Add cover photo</Text>
+            <View style={[styles.heroPlaceholder, { backgroundColor: colors.border, borderColor: colors.border }]}>
+              <Ionicons name="camera-outline" size={32} color={colors.textSecondary} />
+              <Text style={[styles.heroPlaceholderText, { color: colors.textSecondary }]}>Add cover photo</Text>
             </View>
           )}
         </TouchableOpacity>
         <View style={styles.heroActionsRow}>
           <TouchableOpacity style={styles.stockPhotoBtn} onPress={() => setShowStockPicker(true)}>
-            <Ionicons name="search" size={14} color={Colors.primary} />
-            <Text style={styles.stockPhotoBtnText}>Find stock photo</Text>
+            <Ionicons name="search" size={14} color={colors.primary} />
+            <Text style={[styles.stockPhotoBtnText, { color: colors.primary }]}>Find stock photo</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.stockPhotoBtn} onPress={() => setShowAIGenerator(true)}>
-            <Ionicons name="sparkles" size={14} color={Colors.primary} />
-            <Text style={styles.stockPhotoBtnText}>Generate with AI</Text>
+            <Ionicons name="sparkles" size={14} color={colors.primary} />
+            <Text style={[styles.stockPhotoBtnText, { color: colors.primary }]}>Generate with AI</Text>
           </TouchableOpacity>
           {heroImage && (
             <TouchableOpacity style={styles.removeImageBtn} onPress={() => { setHeroImage(null); setIsStockImage(false); setIsAiGenerated(false); }}>
-              <Ionicons name="close-circle" size={16} color={Colors.danger} />
+              <Ionicons name="close-circle" size={16} color={colors.danger} />
               <Text style={styles.removeImageText}>Remove photo</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* Title */}
-        <Text style={styles.label}>Title *</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Title *</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="e.g. Grandma's Apple Pie"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={title}
           onChangeText={setTitle}
           maxLength={200}
         />
 
         {/* Description */}
-        <Text style={styles.label}>Description</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Description</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
+          style={[styles.input, styles.multiline, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="A short description of this recipe..."
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={description}
           onChangeText={setDescription}
           multiline
@@ -515,11 +515,11 @@ export default function AddRecipeScreen() {
         />
 
         {/* Notes */}
-        <Text style={styles.label}>Notes</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
+          style={[styles.input, styles.multiline, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
           placeholder="Source, tips, variations, personal notes..."
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -528,78 +528,78 @@ export default function AddRecipeScreen() {
         />
 
         {/* Category (multi-select) */}
-        <Text style={styles.label}>Categories</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Categories</Text>
         <View style={styles.chipWrap}>
           {CATEGORIES.map((c) => (
             <TouchableOpacity
               key={c}
-              style={[styles.chip, categories.includes(c) && styles.chipActive]}
+              style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }, categories.includes(c) && styles.chipActive]}
               onPress={() => toggleCategory(c)}
               dataSet={{ hover: 'chip' }}
             >
-              <Text style={[styles.chipText, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
+              <Text style={[styles.chipText, { color: colors.text }, categories.includes(c) && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Recipe type */}
-        <Text style={styles.label}>Recipe Type</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Recipe Type</Text>
         <View style={styles.chipWrap}>
           <TouchableOpacity
-            style={[styles.chip, recipeType === 'family_recipe' && styles.chipActive]}
+            style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }, recipeType === 'family_recipe' && styles.chipActive]}
             dataSet={{ hover: 'chip' }}
             onPress={() => setRecipeType('family_recipe')}
           >
-            <Text style={[styles.chipText, recipeType === 'family_recipe' && styles.chipTextActive]}>Family Recipe</Text>
+            <Text style={[styles.chipText, { color: colors.text }, recipeType === 'family_recipe' && styles.chipTextActive]}>Family Recipe</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.chip, recipeType === 'personal_favorite' && styles.chipActive]}
+            style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }, recipeType === 'personal_favorite' && styles.chipActive]}
             dataSet={{ hover: 'chip' }}
             onPress={() => setRecipeType('personal_favorite')}
           >
-            <Text style={[styles.chipText, recipeType === 'personal_favorite' && styles.chipTextActive]}>Personal Favorite</Text>
+            <Text style={[styles.chipText, { color: colors.text }, recipeType === 'personal_favorite' && styles.chipTextActive]}>Personal Favorite</Text>
           </TouchableOpacity>
         </View>
 
         {/* Family */}
-        <Text style={styles.label}>
+        <Text style={[styles.label, { color: colors.text }]}>
           Family{recipeType === 'personal_favorite' ? ' (optional)' : ''}
         </Text>
         <View style={styles.chipWrap}>
           {FAMILIES.map((f) => (
             <TouchableOpacity
               key={f}
-              style={[styles.chip, family === f && styles.chipActive]}
+              style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }, family === f && styles.chipActive]}
               dataSet={{ hover: 'chip' }}
               onPress={() => setFamily(family === f ? '' : f)}
             >
-              <Text style={[styles.chipText, family === f && styles.chipTextActive]}>{f}</Text>
+              <Text style={[styles.chipText, { color: colors.text }, family === f && styles.chipTextActive]}>{f}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Cuisine */}
-        <Text style={styles.label}>Cuisine</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Cuisine</Text>
         <View style={styles.chipWrap}>
           {CUISINES.map((c) => (
             <TouchableOpacity
               key={c}
-              style={[styles.chip, cuisine === c && styles.chipActive]}
+              style={[styles.chip, { backgroundColor: colors.surface, borderColor: colors.border }, cuisine === c && styles.chipActive]}
               onPress={() => setCuisine(c)}
               dataSet={{ hover: 'chip' }}
             >
-              <Text style={[styles.chipText, cuisine === c && styles.chipTextActive]}>{c}</Text>
+              <Text style={[styles.chipText, { color: colors.text }, cuisine === c && styles.chipTextActive]}>{c}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Tags */}
-        <Text style={styles.label}>Tags</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Tags</Text>
         <View>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
             placeholder="apple, family, baking  (comma separated)"
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={tagsInput}
             onChangeText={setTagsInput}
             onFocus={() => setTagsFocused(true)}
@@ -613,14 +613,14 @@ export default function AddRecipeScreen() {
             autoCapitalize="none"
           />
           {tagsFocused && tagSuggestions.length > 0 && (
-            <View style={styles.suggestionsBox}>
+            <View style={[styles.suggestionsBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               {tagSuggestions.map((tag) => (
                 <TouchableOpacity
                   key={tag}
-                  style={styles.suggestionItem}
+                  style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
                   onPress={() => acceptTag(tag)}
                 >
-                  <Text style={styles.suggestionText}>{tag}</Text>
+                  <Text style={[styles.suggestionText, { color: colors.text }]}>{tag}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -630,33 +630,33 @@ export default function AddRecipeScreen() {
         {/* Prep Time / Cook Time / Servings */}
         <View style={styles.timeRow}>
           <View style={styles.timeField}>
-            <Text style={styles.label}>Prep Time (min)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Prep Time (min)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="e.g. 15"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={prepTime}
               onChangeText={setPrepTime}
               keyboardType="numeric"
             />
           </View>
           <View style={styles.timeField}>
-            <Text style={styles.label}>Cook Time (min)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Cook Time (min)</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="e.g. 30"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={cookTime}
               onChangeText={setCookTime}
               keyboardType="numeric"
             />
           </View>
           <View style={styles.timeField}>
-            <Text style={styles.label}>Servings</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Servings</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="e.g. 4 or 4-6"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={servings}
               onChangeText={setServings}
             />
@@ -664,7 +664,7 @@ export default function AddRecipeScreen() {
         </View>
 
         {/* Ingredients */}
-        <Text style={styles.sectionHeader}>Ingredients</Text>
+        <Text style={[styles.sectionHeader, { color: colors.text, borderBottomColor: colors.primary }]}>Ingredients</Text>
         {ingredients.map((ing, i) => (
           <DraggableRow
             key={i}
@@ -677,39 +677,39 @@ export default function AddRecipeScreen() {
             ]}
           >
             <View style={styles.dragHandle}>
-              <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+              <Ionicons name="reorder-three" size={20} color={colors.textSecondary} />
             </View>
             <TextInput
-              style={[styles.input, styles.amountInput]}
+              style={[styles.input, styles.amountInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="Amt"
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={ing.amount}
               onChangeText={(v) => updateIngredient(i, 'amount', v)}
               maxLength={20}
             />
             <View style={styles.unitWrapper}>
               <TouchableOpacity
-                style={[styles.input, styles.unitInput]}
+                style={[styles.input, styles.unitInput, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => setUnitDropdownIndex(unitDropdownIndex === i ? null : i)}
               >
                 <Text style={ing.unit ? styles.unitText : styles.unitPlaceholder}>
                   {ing.unit || 'Unit'}
                 </Text>
-                <Ionicons name="chevron-down" size={14} color={Colors.textSecondary} />
+                <Ionicons name="chevron-down" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
               {unitDropdownIndex === i && (
-                <View style={styles.unitDropdown}>
+                <View style={[styles.unitDropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   <ScrollView style={styles.unitDropdownScroll} nestedScrollEnabled>
                     {UNITS.map((u) => (
                       <TouchableOpacity
                         key={u}
-                        style={[styles.unitOption, ing.unit === u && styles.unitOptionActive]}
+                        style={[styles.unitOption, { borderBottomColor: colors.border }, ing.unit === u && styles.unitOptionActive]}
                         onPress={() => {
                           updateIngredient(i, 'unit', u);
                           setUnitDropdownIndex(null);
                         }}
                       >
-                        <Text style={[styles.unitOptionText, ing.unit === u && styles.unitOptionTextActive]}>
+                        <Text style={[styles.unitOptionText, { color: colors.text }, ing.unit === u && styles.unitOptionTextActive]}>
                           {u || '(none)'}
                         </Text>
                       </TouchableOpacity>
@@ -720,9 +720,9 @@ export default function AddRecipeScreen() {
             </View>
             <View style={[styles.ingredientItemWrapper, ingredientFocusIndex === i && { zIndex: 100 }]}>
               <TextInput
-                style={[styles.input, styles.itemInput]}
+                style={[styles.input, styles.itemInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 placeholder="Ingredient"
-                placeholderTextColor={Colors.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={ing.item}
                 onChangeText={(v) => updateIngredient(i, 'item', v)}
                 maxLength={200}
@@ -737,14 +737,14 @@ export default function AddRecipeScreen() {
                 }}
               />
               {ingredientFocusIndex === i && getIngredientSuggestions(i).length > 0 && (
-                <View style={styles.ingredientSuggestions}>
+                <View style={[styles.ingredientSuggestions, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                   {getIngredientSuggestions(i).map((name) => (
                     <TouchableOpacity
                       key={name}
-                      style={styles.suggestionItem}
+                      style={[styles.suggestionItem, { borderBottomColor: colors.border }]}
                       onPress={() => acceptIngredient(i, name)}
                     >
-                      <Text style={styles.suggestionText}>{name}</Text>
+                      <Text style={[styles.suggestionText, { color: colors.text }]}>{name}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -752,30 +752,30 @@ export default function AddRecipeScreen() {
             </View>
             {ingredients.length > 1 && (
               <TouchableOpacity onPress={() => removeIngredient(i)} style={styles.removeBtn}>
-                <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
+                <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
           </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addIngredient}>
-          <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
           <Text style={styles.addRowText}>Add ingredient</Text>
         </TouchableOpacity>
 
         {/* Steps */}
-        <Text style={styles.sectionHeader}>Instructions</Text>
+        <Text style={[styles.sectionHeader, { color: colors.text, borderBottomColor: colors.primary }]}>Instructions</Text>
         {steps.map((step, i) => (
           <DraggableRow
             key={i}
             index={i}
             dragType="step"
             onReorder={moveStep}
-            style={styles.stepBlock}
+            style={[styles.stepBlock, { backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <View style={styles.stepHeader}>
               <View style={styles.stepHeaderLeft}>
                 <View style={styles.dragHandle}>
-                  <Ionicons name="reorder-three" size={20} color={Colors.textSecondary} />
+                  <Ionicons name="reorder-three" size={20} color={colors.textSecondary} />
                 </View>
                 <View style={styles.stepBadge}>
                   <Text style={styles.stepBadgeText}>{i + 1}</Text>
@@ -783,14 +783,14 @@ export default function AddRecipeScreen() {
               </View>
               {steps.length > 1 && (
                 <TouchableOpacity onPress={() => removeStep(i)} style={styles.removeBtn}>
-                  <Ionicons name="close-circle" size={22} color={Colors.textSecondary} />
+                  <Ionicons name="close-circle" size={22} color={colors.textSecondary} />
                 </TouchableOpacity>
               )}
             </View>
             <TextInput
-              style={[styles.input, styles.multiline]}
+              style={[styles.input, styles.multiline, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
               placeholder="Describe this step..."
-              placeholderTextColor={Colors.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={step.instruction}
               onChangeText={(v) => updateStep(i, v)}
               multiline
@@ -802,35 +802,35 @@ export default function AddRecipeScreen() {
                 <Image source={{ uri: step.image_url }} style={styles.stepImagePreview} />
                 <View style={styles.stepImageActions}>
                   <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSteps((prev) => prev.map((s, idx) => idx === i ? { ...s, image_url: undefined } : s))}>
-                    <Ionicons name="close-circle" size={16} color={Colors.danger} />
+                    <Ionicons name="close-circle" size={16} color={colors.danger} />
                     <Text style={styles.removeImageText}>Remove</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.removeImageBtn} onPress={() => pickStepImage(i)}>
-                    <Ionicons name="swap-horizontal" size={16} color={Colors.primary} />
+                    <Ionicons name="swap-horizontal" size={16} color={colors.primary} />
                     <Text style={[styles.removeImageText, { color: Colors.primary }]}>Replace</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             ) : uploadingStepIndex === i ? (
-              <View style={styles.stepImageBtn}>
-                <ActivityIndicator size="small" color={Colors.primary} />
-                <Text style={styles.stepImageBtnText}>Uploading photo...</Text>
+              <View style={[styles.stepImageBtn, { borderColor: colors.border }]}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.stepImageBtnText, { color: colors.textSecondary }]}>Uploading photo...</Text>
               </View>
             ) : (
-              <TouchableOpacity style={styles.stepImageBtn} onPress={() => pickStepImage(i)}>
-                <Ionicons name="image-outline" size={18} color={Colors.textSecondary} />
-                <Text style={styles.stepImageBtnText}>Add photo for this step</Text>
+              <TouchableOpacity style={[styles.stepImageBtn, { borderColor: colors.border }]} onPress={() => pickStepImage(i)}>
+                <Ionicons name="image-outline" size={18} color={colors.textSecondary} />
+                <Text style={[styles.stepImageBtnText, { color: colors.textSecondary }]}>Add photo for this step</Text>
               </TouchableOpacity>
             )}
           </DraggableRow>
         ))}
         <TouchableOpacity style={styles.addRowBtn} onPress={addStep}>
-          <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+          <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
           <Text style={styles.addRowText}>Add step</Text>
         </TouchableOpacity>
 
       </ScrollView>
-      <View style={styles.saveBar}>
+      <View style={[styles.saveBar, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
         {/* @ts-ignore */}
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving} dataSet={{ hover: 'btn' }}>
           {saving ? (
