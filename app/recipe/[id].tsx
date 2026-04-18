@@ -337,12 +337,26 @@ export default function RecipeDetailScreen() {
   }
 
   async function loadComments() {
+    // Fetch comments, then batch-load profile names
     const { data } = await supabase
       .from('comments')
-      .select('id,recipe_id,user_id,body,created_at,profiles(full_name,avatar_url)')
+      .select('id,recipe_id,user_id,body,created_at')
       .eq('recipe_id', id)
       .order('created_at', { ascending: true });
-    if (data) setComments(data as unknown as Comment[]);
+    if (!data?.length) { setComments([]); return; }
+
+    // Get unique user IDs and fetch their profiles
+    const userIds = [...new Set(data.map((c) => c.user_id))];
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id,full_name,avatar_url')
+      .in('id', userIds);
+    const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p]));
+
+    setComments(data.map((c) => ({
+      ...c,
+      profiles: profileMap.get(c.user_id) ?? { full_name: 'Unknown' },
+    })) as unknown as Comment[]);
   }
 
   async function submitComment() {
