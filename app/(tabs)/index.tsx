@@ -44,6 +44,7 @@ export default function HomeScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const scrollPos = useRef(0);
   const hoveringRef = useRef(false);
+  const programmaticScroll = useRef(false);
   const [autoScroll, setAutoScroll] = useState(true);
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredCard, setHoveredCard] = useState<number | null>(null);
@@ -181,12 +182,11 @@ export default function HomeScreen() {
         const delta = time - lastTime;
         if (!hoveringRef.current) {
           scrollPos.current += (PIXELS_PER_SECOND * delta) / 1000;
+          programmaticScroll.current = true;
           if (scrollPos.current >= oneSetWidth) {
             scrollPos.current -= oneSetWidth;
-            scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
-          } else {
-            scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
           }
+          scrollRef.current?.scrollTo({ x: scrollPos.current, animated: false });
         }
       }
       lastTime = time;
@@ -310,13 +310,18 @@ export default function HomeScreen() {
               resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
             }}
             onScroll={(e) => {
-              // Always track scroll position so auto-scroll resumes from the right place
-              scrollPos.current = e.nativeEvent.contentOffset.x;
-              // Pause auto-scroll on any user-initiated scroll (trackpad, touch, etc.)
-              if (autoScroll) {
-                setAutoScroll(false);
-                if (resumeTimer.current) clearTimeout(resumeTimer.current);
-                resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
+              const x = e.nativeEvent.contentOffset.x;
+              if (programmaticScroll.current) {
+                // This scroll was triggered by our rAF loop — just clear the flag
+                programmaticScroll.current = false;
+              } else {
+                // User-initiated scroll (trackpad, wheel, swipe)
+                scrollPos.current = x;
+                if (autoScroll) {
+                  setAutoScroll(false);
+                  if (resumeTimer.current) clearTimeout(resumeTimer.current);
+                  resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
+                }
               }
             }}
             scrollEventThrottle={100}
