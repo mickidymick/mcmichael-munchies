@@ -59,9 +59,9 @@ function useWebMeta() {
     addLink('apple-touch-icon', '/apple-touch-icon.png');
 
     // Default OG tags (recipe detail pages override title/description dynamically)
-    addMeta('description', 'Family recipes from the McMichaels, Knepps, Elmores, and Rosses.');
+    addMeta('description', 'Family recipes from the McMichaels, Murthas, Elmores, and Rosses.');
     addMeta('og:title', 'McMichael Munchies');
-    addMeta('og:description', 'Family recipes from the McMichaels, Knepps, Elmores, and Rosses.');
+    addMeta('og:description', 'Family recipes from the McMichaels, Murthas, Elmores, and Rosses.');
     addMeta('og:type', 'website');
     addMeta('og:image', '/logo.png');
 

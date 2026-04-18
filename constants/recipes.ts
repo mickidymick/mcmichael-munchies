@@ -32,7 +32,7 @@ export const CATEGORY_ICONS: { label: string; icon: keyof typeof Ionicons.glyphM
   { label: 'The Wok', icon: 'flame-outline' },
 ];
 
-export const FAMILIES: RecipeFamily[] = ["McMichael's", "Knepp's", "Elmore's", "Ross's"];
+export const FAMILIES: RecipeFamily[] = ["McMichael's", "Murtha's", "Elmore's", "Ross's"];
 
 export const CUISINES = [
   'American', 'Southern', 'Italian', 'Mexican', 'Greek', 'Mediterranean',

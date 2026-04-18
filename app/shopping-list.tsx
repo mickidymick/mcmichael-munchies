@@ -80,11 +80,22 @@ export default function ShoppingListScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <Text style={styles.heading}>Shopping List</Text>
-          {checkedCount > 0 && (
-            <TouchableOpacity onPress={clearChecked}>
-              <Text style={styles.clearText}>Clear checked ({checkedCount})</Text>
-            </TouchableOpacity>
-          )}
+          <View style={styles.headerActions}>
+            {checkedCount > 0 && (
+              <TouchableOpacity onPress={clearChecked}>
+                <Text style={styles.clearText}>Clear checked ({checkedCount})</Text>
+              </TouchableOpacity>
+            )}
+            {items.length > 0 && (
+              <TouchableOpacity onPress={async () => {
+                const allIds = items.map((i) => i.id);
+                setItems([]);
+                await supabase.from('shopping_list').delete().in('id', allIds);
+              }}>
+                <Text style={styles.clearAllText}>Clear all</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -171,7 +182,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   heading: { fontSize: 22, fontWeight: '700', color: Colors.text },
+  headerActions: { flexDirection: 'row', gap: 16 },
   clearText: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  clearAllText: { fontSize: 14, color: Colors.danger, fontWeight: '600' },
   addRow: { paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center' },
   addRowInner: {
     flexDirection: 'row',

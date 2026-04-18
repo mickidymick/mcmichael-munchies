@@ -410,7 +410,7 @@ export default function HomeScreen() {
         <View style={styles.contentWrap}>
           <Text style={styles.introTitle}>McMichael Munchies</Text>
           <Text style={styles.introText}>
-            Family recipes, personal favorites, and tasty treats from the McMichaels, Knepps, Elmores, and Rosses — all in one place.
+            Family recipes, personal favorites, and tasty treats from the McMichaels, Murthas, Elmores, and Rosses — all in one place.
           </Text>
           {totalCount > 0 && (
             <View style={styles.statsRow}>

@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type RecipeFamily = "McMichael's" | "Knepp's" | "Elmore's" | "Ross's";
+export type RecipeFamily = "McMichael's" | "Murtha's" | "Elmore's" | "Ross's";
 
 export type RecipeType = 'family_recipe' | 'personal_favorite';
 
