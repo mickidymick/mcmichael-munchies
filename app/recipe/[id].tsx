@@ -34,8 +34,19 @@ import { DIETARY_ICONS } from '../../constants/recipes';
 function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFactor: number; onClose: () => void }) {
   useKeepAwake();
   const steps = (recipe.steps ?? []).sort((a, b) => a.order - b.order);
+  const ingredients = recipe.ingredients ?? [];
   const [currentStep, setCurrentStep] = useState(0);
-  const [showIngredients, setShowIngredients] = useState(false);
+  const [checkedIngs, setCheckedIngs] = useState<Set<number>>(new Set());
+  const [showIngredients, setShowIngredients] = useState(true);
+
+  function toggleIng(index: number) {
+    setCheckedIngs((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  }
 
   if (steps.length === 0) return null;
 
@@ -56,20 +67,42 @@ function CookMode({ recipe, scaleFactor, onClose }: { recipe: Recipe; scaleFacto
             onPress={() => setShowIngredients(!showIngredients)}
             style={cookStyles.ingredientsToggle}
           >
-            <Ionicons name="list-outline" size={22} color={Colors.primary} />
+            <Ionicons name={showIngredients ? 'chevron-up' : 'list-outline'} size={22} color={Colors.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Ingredients panel */}
-        {showIngredients && (
-          <ScrollView style={cookStyles.ingredientsPanel}>
-            <Text style={cookStyles.ingredientsPanelTitle}>Ingredients{scaleFactor !== 1 ? ` (${scaleFactor}x)` : ''}</Text>
-            {(recipe.ingredients ?? []).map((ing, i) => (
-              <Text key={i} style={cookStyles.ingredientItem}>
-                {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
+        {/* Ingredients checklist — always visible, collapsible */}
+        {showIngredients && ingredients.length > 0 && (
+          <View style={cookStyles.ingredientsPanel}>
+            <View style={cookStyles.ingredientsHeader}>
+              <Text style={cookStyles.ingredientsPanelTitle}>
+                Ingredients{scaleFactor !== 1 ? ` (${scaleFactor}x)` : ''}
               </Text>
-            ))}
-          </ScrollView>
+              <Text style={cookStyles.ingredientsCount}>
+                {checkedIngs.size}/{ingredients.length}
+              </Text>
+            </View>
+            <ScrollView style={cookStyles.ingredientsList} showsVerticalScrollIndicator={false}>
+              {ingredients.map((ing, i) => {
+                const checked = checkedIngs.has(i);
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={cookStyles.ingredientRow}
+                    onPress={() => toggleIng(i)}
+                    activeOpacity={0.6}
+                  >
+                    <View style={[cookStyles.checkbox, checked && cookStyles.checkboxChecked]}>
+                      {checked && <Ionicons name="checkmark" size={12} color="#FFF" />}
+                    </View>
+                    <Text style={[cookStyles.ingredientItem, checked && cookStyles.ingredientItemChecked]}>
+                      {[scaleAmount(ing.amount, scaleFactor), ing.unit, ing.item].filter(Boolean).join(' ')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
         )}
 
         {/* Step content */}
@@ -136,15 +169,44 @@ const cookStyles = StyleSheet.create({
   headerTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: Colors.text },
   ingredientsToggle: { padding: 4 },
   ingredientsPanel: {
-    maxHeight: 200,
+    maxHeight: 220,
     backgroundColor: Colors.secondary,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 6,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  ingredientsPanelTitle: { fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 8 },
-  ingredientItem: { fontSize: 14, color: Colors.text, lineHeight: 22, paddingLeft: 8 },
+  ingredientsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  ingredientsPanelTitle: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  ingredientsCount: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  ingredientsList: { maxHeight: 180 },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 5,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  ingredientItem: { flex: 1, fontSize: 14, color: Colors.text, lineHeight: 20 },
+  ingredientItemChecked: { textDecorationLine: 'line-through', color: Colors.textSecondary },
   body: { flex: 1 },
   bodyContent: {
     padding: 24,
