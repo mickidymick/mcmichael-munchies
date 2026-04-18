@@ -96,8 +96,11 @@ function useWebDarkMode() {
         [style*="color: rgb(51, 51, 51)"] { color: #e8e8e8 !important; }
         [style*="color: rgb(119, 119, 119)"] { color: #999999 !important; }
         [style*="border-color: rgb(224, 216, 206)"] { border-color: #3a3a3a !important; }
-        [style*="border-bottom-color: rgb(224, 216, 206)"] { border-bottom-color: #3a3a3a !important; }
         [style*="border-top-color: rgb(224, 216, 206)"] { border-top-color: #3a3a3a !important; }
+        [style*="border-right-color: rgb(224, 216, 206)"] { border-right-color: #3a3a3a !important; }
+        [style*="border-bottom-color: rgb(224, 216, 206)"] { border-bottom-color: #3a3a3a !important; }
+        [style*="border-left-color: rgb(224, 216, 206)"] { border-left-color: #3a3a3a !important; }
+        [style*="border-color: rgb(196, 124, 48)"] { border-color: #d4923e !important; }
         input, textarea { color: #e8e8e8 !important; background-color: #1a1a1a !important; border-color: #3a3a3a !important; }
         input::placeholder, textarea::placeholder { color: #999999 !important; }
       `;
