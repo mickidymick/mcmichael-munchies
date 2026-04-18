@@ -11,6 +11,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { useUserRole } from '../lib/useUserRole';
 
 const NAV_LINKS: { label: string; href: string; icon: keyof typeof Ionicons.glyphMap; match: (p: string) => boolean }[] = [
@@ -24,6 +25,7 @@ const NAV_LINKS: { label: string; href: string; icon: keyof typeof Ionicons.glyp
 const COMPACT_BREAKPOINT = 700;
 
 export default function NavBar() {
+  const colors = useThemeColors();
   const router = useRouter();
   const pathname = usePathname();
   const { isMemberOrAdmin } = useUserRole();
@@ -60,7 +62,7 @@ export default function NavBar() {
                 dataSet={{ hover: 'nav' }}
               >
                 {isCompact ? (
-                  <Ionicons name={link.icon} size={22} color={isActive ? Colors.primary : Colors.text} />
+                  <Ionicons name={link.icon} size={22} color={isActive ? colors.primary : colors.text} />
                 ) : (
                   <Text style={[styles.linkText, isActive && styles.linkTextActive]}>
                     {link.label}
@@ -79,7 +81,7 @@ export default function NavBar() {
                 style={styles.menuBtn}
                 onPress={() => setMenuOpen(!menuOpen)}
               >
-                <Ionicons name={menuOpen ? 'close' : 'menu'} size={24} color={Colors.primary} />
+                <Ionicons name={menuOpen ? 'close' : 'menu'} size={24} color={colors.primary} />
               </TouchableOpacity>
               {menuOpen && (
                 <View style={styles.dropdown}>
@@ -87,14 +89,14 @@ export default function NavBar() {
                     style={styles.dropdownItem}
                     onPress={() => { router.push('/add-recipe'); setMenuOpen(false); }}
                   >
-                    <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
+                    <Ionicons name="add-circle-outline" size={18} color={colors.primary} />
                     <Text style={styles.dropdownText}>Add Recipe</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.dropdownItem}
                     onPress={() => { router.push('/auto-import'); setMenuOpen(false); }}
                   >
-                    <Ionicons name="documents-outline" size={18} color={Colors.primary} />
+                    <Ionicons name="documents-outline" size={18} color={colors.primary} />
                     <Text style={styles.dropdownText}>Auto Import</Text>
                   </TouchableOpacity>
                 </View>
@@ -107,7 +109,7 @@ export default function NavBar() {
                 onPress={() => router.push('/auto-import')}
                 dataSet={{ hover: 'btn' }}
               >
-                <Ionicons name="documents-outline" size={16} color={Colors.primary} />
+                <Ionicons name="documents-outline" size={16} color={colors.primary} />
                 <Text style={styles.bulkBtnText}>Auto Import</Text>
               </TouchableOpacity>
               <TouchableOpacity

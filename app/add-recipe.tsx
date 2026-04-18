@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Ingredient, Step, RecipeFamily, RecipeType } from '../lib/supabase';
 import { getUniqueTags, getUniqueIngredients, invalidateAutocompleteCache } from '../lib/autocomplete';
 import { downscaleImageBlob, generateBlurhash } from '../lib/images';
@@ -29,6 +30,7 @@ import { invalidateSearchCache } from '../components/SearchBar';
 import { CATEGORIES, FAMILIES, UNITS, CUISINES } from '../constants/recipes';
 
 export default function AddRecipeScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const navigation = useNavigation();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();

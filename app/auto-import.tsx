@@ -15,6 +15,7 @@ import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Ingredient, Step, RecipeFamily } from '../lib/supabase';
 import { estimateCalories } from '../lib/nutrition';
 import { useUserRole } from '../lib/useUserRole';
@@ -77,6 +78,7 @@ Rules:
 - If you can't read something clearly, make your best guess and add "[?]" to flag it`;
 
 export default function AutoImportScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { isMemberOrAdmin, loading: roleLoading } = useUserRole();
   const [mode, setMode] = useState<'photos' | 'paste'>('photos');

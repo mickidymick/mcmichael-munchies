@@ -2,17 +2,19 @@ import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 
 export default function TabLayout() {
+  const colors = useThemeColors();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: Platform.OS === 'web'
           ? { display: 'none' }
-          : { backgroundColor: Colors.tabBar, borderTopColor: Colors.border },
-        tabBarActiveTintColor: Colors.tabBarActive,
-        tabBarInactiveTintColor: Colors.tabBarInactive,
+          : { backgroundColor: colors.tabBar, borderTopColor: colors.border },
+        tabBarActiveTintColor: colors.tabBarActive,
+        tabBarInactiveTintColor: colors.tabBarInactive,
       }}
     >
       <Tabs.Screen

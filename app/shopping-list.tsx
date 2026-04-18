@@ -12,10 +12,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, ShoppingItem } from '../lib/supabase';
 import { useUserRole } from '../lib/useUserRole';
 
 export default function ShoppingListScreen() {
+  const colors = useThemeColors();
   const { userId } = useUserRole();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export default function ShoppingListScreen() {
   if (!userId) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="cart-outline" size={56} color={Colors.primary} style={{ opacity: 0.4 }} />
+        <Ionicons name="cart-outline" size={56} color={colors.primary} style={{ opacity: 0.4 }} />
         <Text style={styles.emptyTitle}>Shopping List</Text>
         <Text style={styles.emptyText}>Sign in to use your shopping list.</Text>
       </View>
@@ -92,7 +94,7 @@ export default function ShoppingListScreen() {
           <TextInput
             style={styles.addInput}
             placeholder="Add an item..."
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={newItem}
             onChangeText={setNewItem}
             onSubmitEditing={addItem}
@@ -109,10 +111,10 @@ export default function ShoppingListScreen() {
       </View>
 
       {loading ? (
-        <ActivityIndicator style={styles.loader} color={Colors.primary} />
+        <ActivityIndicator style={styles.loader} color={colors.primary} />
       ) : items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="cart-outline" size={48} color={Colors.textSecondary} />
+          <Ionicons name="cart-outline" size={48} color={colors.textSecondary} />
           <Text style={styles.emptyText}>Your shopping list is empty.</Text>
           <Text style={styles.emptySubtext}>Add items above or tap "Add to Shopping List" on any recipe.</Text>
         </View>
@@ -138,7 +140,7 @@ export default function ShoppingListScreen() {
                 {item.item}
               </Text>
               <TouchableOpacity onPress={() => deleteItem(item.id)} style={styles.deleteBtn}>
-                <Ionicons name="close" size={16} color={Colors.textSecondary} />
+                <Ionicons name="close" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           )}

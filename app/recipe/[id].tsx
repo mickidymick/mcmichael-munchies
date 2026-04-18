@@ -18,6 +18,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Share } from 'react-native';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Colors, Layout } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 import { TextInput } from 'react-native';
 import { supabase, Recipe, Comment } from '../../lib/supabase';
 import FamilyBadge from '../../components/FamilyBadge';
@@ -226,6 +227,7 @@ const scaleStyles = StyleSheet.create({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RecipeDetailScreen() {
+  const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { isMemberOrAdmin, isAdmin, userId } = useUserRole();

@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 const HEADER_TOP = Layout.headerTop;
 import { supabase, Recipe } from '../../lib/supabase';
 
@@ -30,6 +31,7 @@ import { CarouselSkeleton, HomeGridSkeleton } from '../../components/Skeleton';
 const CARD_GAP = 8;
 
 export default function HomeScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { isMemberOrAdmin } = useUserRole();
@@ -229,7 +231,7 @@ export default function HomeScreen() {
             <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
             {isMemberOrAdmin && (
               <TouchableOpacity onPress={() => router.push('/add-recipe')} style={styles.addButton}>
-                <Ionicons name="add-circle-outline" size={28} color={Colors.primary} />
+                <Ionicons name="add-circle-outline" size={28} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -331,7 +333,7 @@ export default function HomeScreen() {
                     <LazyImage source={{ uri: item.image_url }} blurhash={item.blurhash} style={styles.carouselCardImage} contentFit="cover" accessibilityLabel={`Photo of ${item.title}`} />
                   ) : (
                     <View style={[styles.carouselCardImage, styles.carouselCardPlaceholder]}>
-                      <Ionicons name="restaurant-outline" size={36} color={Colors.primary} style={{ opacity: 0.5 }} />
+                      <Ionicons name="restaurant-outline" size={36} color={colors.primary} style={{ opacity: 0.5 }} />
                       <Text style={styles.placeholderTitle} numberOfLines={2}>{item.title}</Text>
                     </View>
                   )}
@@ -342,7 +344,7 @@ export default function HomeScreen() {
                   )}
                   {isFavorite(item.id) && (
                     <View style={styles.carouselHeart}>
-                      <Ionicons name="heart" size={16} color={Colors.primary} />
+                      <Ionicons name="heart" size={16} color={colors.primary} />
                     </View>
                   )}
                   <View style={[styles.carouselCardOverlay, hoveredCard === index && styles.carouselCardOverlayExpanded]}>
@@ -391,14 +393,14 @@ export default function HomeScreen() {
         </View>
       ) : (
         <View style={styles.carouselPlaceholderContainer}>
-          <Ionicons name="restaurant-outline" size={40} color={Colors.textSecondary} />
+          <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
           <Text style={styles.placeholderText}>Add some recipes to see them here!</Text>
         </View>
       )}
 
       {loadError && (
         <TouchableOpacity style={styles.errorBanner} onPress={fetchRecipes}>
-          <Ionicons name="cloud-offline-outline" size={18} color={Colors.danger} />
+          <Ionicons name="cloud-offline-outline" size={18} color={colors.danger} />
           <Text style={styles.errorBannerText}>Failed to load recipes. Tap to retry.</Text>
         </TouchableOpacity>
       )}
@@ -452,12 +454,12 @@ export default function HomeScreen() {
                     />
                   ) : (
                     <View style={[styles.featuredImage, styles.featuredPlaceholder]}>
-                      <Ionicons name="restaurant-outline" size={40} color={Colors.primary} style={{ opacity: 0.3 }} />
+                      <Ionicons name="restaurant-outline" size={40} color={colors.primary} style={{ opacity: 0.3 }} />
                     </View>
                   )}
                   <View style={styles.featuredOverlay}>
                     <View style={styles.featuredBadge}>
-                      <Ionicons name="star" size={12} color={Colors.primary} />
+                      <Ionicons name="star" size={12} color={colors.primary} />
                       <Text style={styles.featuredBadgeText}>Featured</Text>
                     </View>
                     <Text style={styles.featuredTitle} numberOfLines={2}>{featuredRecipe.title}</Text>
@@ -474,9 +476,9 @@ export default function HomeScreen() {
                 onPress={goToRandomRecipe}
                 dataSet={{ hover: 'family' }}
               >
-                <Ionicons name="shuffle-outline" size={22} color={Colors.primary} />
+                <Ionicons name="shuffle-outline" size={22} color={colors.primary} />
                 <Text style={styles.randomBtnText}>Surprise me! Pick a random recipe</Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -495,9 +497,9 @@ export default function HomeScreen() {
                 onPress={() => router.push({ pathname: '/browse', params: { family: fam, recipe_type: 'family_recipe' } })}
                 dataSet={{ hover: 'family' }}
               >
-                <Ionicons name="people-outline" size={22} color={Colors.primary} />
+                <Ionicons name="people-outline" size={22} color={colors.primary} />
                 <Text style={styles.familyButtonText}>{fam}</Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             ))}
             <TouchableOpacity
@@ -505,9 +507,9 @@ export default function HomeScreen() {
               onPress={() => router.push({ pathname: '/browse', params: { recipe_type: 'personal_favorite' } })}
               dataSet={{ hover: 'family' }}
             >
-              <Ionicons name="bookmark-outline" size={22} color={Colors.primary} />
+              <Ionicons name="bookmark-outline" size={22} color={colors.primary} />
               <Text style={styles.familyButtonText}>Personal Favorites</Text>
-              <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -525,7 +527,7 @@ export default function HomeScreen() {
                 onPress={() => router.push({ pathname: '/browse', params: { category: cat.label } })}
                 dataSet={{ hover: 'catChip' }}
               >
-                <Ionicons name={cat.icon} size={16} color={Colors.primary} />
+                <Ionicons name={cat.icon} size={16} color={colors.primary} />
                 <Text style={styles.categoryChipLabel}>{cat.label}</Text>
               </TouchableOpacity>
             ))}
@@ -558,13 +560,13 @@ export default function HomeScreen() {
                       <LazyImage source={{ uri: recipe.image_url }} blurhash={recipe.blurhash} style={styles.recipeCardImage} contentFit="cover" accessibilityLabel={`Photo of ${recipe.title}`} />
                     ) : (
                       <View style={[styles.recipeCardImage, styles.recipeCardPlaceholder]}>
-                        <Ionicons name="restaurant-outline" size={32} color={Colors.primary} style={{ opacity: 0.4 }} />
+                        <Ionicons name="restaurant-outline" size={32} color={colors.primary} style={{ opacity: 0.4 }} />
                         <Text style={styles.gridPlaceholderTitle} numberOfLines={1}>{recipe.title}</Text>
                       </View>
                     )}
                     {isFavorite(recipe.id) && (
                       <View style={styles.gridHeart}>
-                        <Ionicons name="heart" size={14} color={Colors.primary} />
+                        <Ionicons name="heart" size={14} color={colors.primary} />
                       </View>
                     )}
                   </View>
@@ -586,7 +588,7 @@ export default function HomeScreen() {
               dataSet={{ hover: 'btn' }}
             >
               <Text style={styles.viewAllText}>View All Recipes</Text>
-              <Ionicons name="arrow-forward" size={18} color={Colors.primary} />
+              <Ionicons name="arrow-forward" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>

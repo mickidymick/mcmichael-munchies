@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 
 type SpoonacularResult = {
@@ -36,6 +37,7 @@ function upgradeImage(url: string): string {
 }
 
 export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: Props) {
+  const colors = useThemeColors();
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<SpoonacularResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -84,7 +86,7 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
         <View style={styles.header}>
           <Text style={styles.title}>Find a stock photo</Text>
           <TouchableOpacity onPress={onCancel} accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={Colors.textSecondary} />
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -94,7 +96,7 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
             value={query}
             onChangeText={setQuery}
             placeholder="Search recipes..."
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             onSubmitEditing={() => search(query)}
             returnKeyType="search"
           />
@@ -110,20 +112,20 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
         <View style={styles.resultsArea}>
           {loading && (
             <View style={styles.centerState}>
-              <ActivityIndicator color={Colors.primary} />
+              <ActivityIndicator color={colors.primary} />
             </View>
           )}
 
           {!loading && error && (
             <View style={styles.centerState}>
-              <Ionicons name="alert-circle-outline" size={32} color={Colors.danger} />
+              <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
           {!loading && !error && searched && results.length === 0 && (
             <View style={styles.centerState}>
-              <Ionicons name="image-outline" size={32} color={Colors.textSecondary} />
+              <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
               <Text style={styles.emptyText}>No recipes found. Try a different search.</Text>
             </View>
           )}

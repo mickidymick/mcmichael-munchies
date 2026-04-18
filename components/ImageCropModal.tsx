@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Cropper from 'react-easy-crop';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 type Area = { x: number; y: number; width: number; height: number };
 
@@ -47,6 +48,7 @@ async function getCroppedBlob(imageSrc: string, crop: Area): Promise<string> {
 }
 
 export default function ImageCropModal({ imageUri, aspect = [16, 9], onCrop, onCancel }: Props) {
+  const colors = useThemeColors();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);

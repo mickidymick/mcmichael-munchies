@@ -12,11 +12,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Collection } from '../lib/supabase';
 import { useUserRole } from '../lib/useUserRole';
 import EmptyState from '../components/EmptyState';
 
 export default function CollectionsScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { userId } = useUserRole();
   const [collections, setCollections] = useState<(Collection & { recipe_count: number })[]>([]);
@@ -73,7 +75,7 @@ export default function CollectionsScreen() {
         <View style={styles.headerContent}>
           <Text style={styles.heading}>Collections</Text>
           <TouchableOpacity onPress={() => setShowCreate(!showCreate)}>
-            <Ionicons name={showCreate ? 'close' : 'add-circle-outline'} size={24} color={Colors.primary} />
+            <Ionicons name={showCreate ? 'close' : 'add-circle-outline'} size={24} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -83,7 +85,7 @@ export default function CollectionsScreen() {
           <TextInput
             style={styles.createInput}
             placeholder="Collection name"
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={newName}
             onChangeText={setNewName}
             maxLength={50}
@@ -91,7 +93,7 @@ export default function CollectionsScreen() {
           <TextInput
             style={styles.createInput}
             placeholder="Description (optional)"
-            placeholderTextColor={Colors.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={newDesc}
             onChangeText={setNewDesc}
             maxLength={200}
@@ -127,7 +129,7 @@ export default function CollectionsScreen() {
               dataSet={{ hover: 'card' }}
             >
               <View style={styles.collectionIcon}>
-                <Ionicons name="book-outline" size={24} color={Colors.primary} />
+                <Ionicons name="book-outline" size={24} color={colors.primary} />
               </View>
               <View style={styles.collectionInfo}>
                 <Text style={styles.collectionName}>{item.name}</Text>
@@ -138,7 +140,7 @@ export default function CollectionsScreen() {
                   {item.recipe_count} recipe{item.recipe_count !== 1 ? 's' : ''}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.textSecondary} />
+              <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         />

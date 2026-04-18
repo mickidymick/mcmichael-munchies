@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { useThemeColors } from '../lib/useTheme';
 
 const FAMILY_CONFIG: Record<string, { letter: string; bg: string; color: string }> = {
   "McMichael's": { letter: 'M', bg: '#2E86AB', color: '#FFF' },
@@ -15,6 +16,7 @@ type Props = {
 const FALLBACK = { letter: '?', bg: '#CCBBAA', color: '#FFF' };
 
 export default function FamilyBadge({ family, size = 32 }: Props) {
+  const colors = useThemeColors();
   if (!family) return null;
   const config = FAMILY_CONFIG[family] || FALLBACK;
   const fontSize = size * 0.5;

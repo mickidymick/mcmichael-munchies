@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { memo } from 'react';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { Recipe } from '../lib/supabase';
 import FamilyBadge from './FamilyBadge';
 import { DIETARY_ICONS } from '../constants/recipes';
@@ -19,6 +20,7 @@ type Props = {
 };
 
 export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
+  const colors = useThemeColors();
   const router = useRouter();
   const dietaryTags = (recipe.tags ?? []).filter((t) => DIETARY_ICONS[t.toLowerCase()]);
 
@@ -41,21 +43,21 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
           />
         ) : (
           <View style={[styles.cardImage, styles.imagePlaceholder]}>
-            <Ionicons name="restaurant-outline" size={24} color={Colors.textSecondary} />
+            <Ionicons name="restaurant-outline" size={24} color={colors.textSecondary} />
           </View>
         )}
         {isFavorited && (
           <View style={styles.heartBadge}>
-            <Ionicons name="heart" size={14} color={Colors.primary} />
+            <Ionicons name="heart" size={14} color={colors.primary} />
           </View>
         )}
         {recipe.is_ai_generated ? (
           <View style={styles.stockBadge} accessibilityLabel="AI generated — replace with your own">
-            <Ionicons name="sparkles" size={12} color={Colors.textSecondary} />
+            <Ionicons name="sparkles" size={12} color={colors.textSecondary} />
           </View>
         ) : recipe.is_stock_image ? (
           <View style={styles.stockBadge} accessibilityLabel="Stock photo — replace with your own">
-            <MaterialCommunityIcons name="camera-off" size={12} color={Colors.textSecondary} />
+            <MaterialCommunityIcons name="camera-off" size={12} color={colors.textSecondary} />
           </View>
         ) : null}
       </View>
@@ -64,7 +66,7 @@ export default memo(function RecipeCard({ recipe, isFavorited }: Props) {
           <FamilyBadge family={recipe.family} size={20} />
           {recipe.recipe_type === 'personal_favorite' && (
             <View style={styles.typeBadge} accessibilityLabel="Personal Favorite">
-              <Ionicons name="bookmark" size={10} color={Colors.primary} />
+              <Ionicons name="bookmark" size={10} color={colors.primary} />
             </View>
           )}
           <Text style={styles.cardTitle} numberOfLines={1}>{recipe.title}</Text>

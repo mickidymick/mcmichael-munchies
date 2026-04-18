@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 import { supabase, Recipe, Collection } from '../../lib/supabase';
 import { useUserRole } from '../../lib/useUserRole';
 import { useFavorites } from '../../lib/useFavorites';
@@ -20,6 +21,7 @@ import RecipeCard from '../../components/RecipeCard';
 import EmptyState from '../../components/EmptyState';
 
 export default function CollectionDetailScreen() {
+  const colors = useThemeColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { userId } = useUserRole();
@@ -72,7 +74,7 @@ export default function CollectionDetailScreen() {
   const isOwner = collection?.user_id === userId;
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (!collection) {
@@ -93,7 +95,7 @@ export default function CollectionDetailScreen() {
         <View style={styles.headerContent}>
           {Platform.OS === 'web' && (
             <TouchableOpacity onPress={() => router.canGoBack() ? router.back() : router.push('/collections')} style={styles.backBtn}>
-              <Ionicons name="arrow-back" size={18} color={Colors.primary} />
+              <Ionicons name="arrow-back" size={18} color={colors.primary} />
             </TouchableOpacity>
           )}
           <View style={styles.headerText}>
@@ -104,7 +106,7 @@ export default function CollectionDetailScreen() {
           </View>
           {isOwner && (
             <TouchableOpacity onPress={deleteCollection}>
-              <Ionicons name="trash-outline" size={20} color={Colors.danger} />
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
             </TouchableOpacity>
           )}
         </View>
@@ -135,7 +137,7 @@ export default function CollectionDetailScreen() {
                   style={styles.removeBtn}
                   onPress={() => removeRecipe(item.id)}
                 >
-                  <Ionicons name="close-circle-outline" size={14} color={Colors.textSecondary} />
+                  <Ionicons name="close-circle-outline" size={14} color={colors.textSecondary} />
                   <Text style={styles.removeText}>Remove from collection</Text>
                 </TouchableOpacity>
               )}

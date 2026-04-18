@@ -1,15 +1,17 @@
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Layout } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { FAMILIES } from '../constants/recipes';
 
 export default function AboutScreen() {
+  const colors = useThemeColors();
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>About McMichael Munchies</Text>
 
       <View style={styles.card}>
-        <Ionicons name="heart" size={28} color={Colors.primary} />
+        <Ionicons name="heart" size={28} color={colors.primary} />
         <Text style={styles.heading}>Our Story</Text>
         <Text style={styles.body}>
           McMichael Munchies was created as a place where our families can save, share, and have easy access to all the amazing food we grew up with — as well as discover new favorites together.
@@ -20,7 +22,7 @@ export default function AboutScreen() {
       </View>
 
       <View style={styles.card}>
-        <Ionicons name="people" size={28} color={Colors.primary} />
+        <Ionicons name="people" size={28} color={colors.primary} />
         <Text style={styles.heading}>Our Families</Text>
         <Text style={styles.body}>
           Recipes from across our extended family, spanning generations of home cooking:
@@ -36,7 +38,7 @@ export default function AboutScreen() {
       </View>
 
       <View style={styles.card}>
-        <Ionicons name="restaurant" size={28} color={Colors.primary} />
+        <Ionicons name="restaurant" size={28} color={colors.primary} />
         <Text style={styles.heading}>Features</Text>
         <View style={styles.featureList}>
           {[
@@ -48,7 +50,7 @@ export default function AboutScreen() {
             ['print-outline', 'Print any recipe for the kitchen'],
           ].map(([icon, text]) => (
             <View key={text} style={styles.featureItem}>
-              <Ionicons name={icon as any} size={18} color={Colors.primary} />
+              <Ionicons name={icon as any} size={18} color={colors.primary} />
               <Text style={styles.featureText}>{text}</Text>
             </View>
           ))}

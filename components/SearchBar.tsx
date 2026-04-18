@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useCallback, createElement } from 'react';
 import { createPortal } from 'react-dom';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Ingredient } from '../lib/supabase';
 
 type Props = {
@@ -77,6 +78,7 @@ const ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 };
 
 export default function SearchBar({ value, onChangeText, placeholder, navigateOnSelect, onSubmit }: Props) {
+  const colors = useThemeColors();
   const router = useRouter();
   const [allSuggestions, setAllSuggestions] = useState<Suggestion[]>([]);
   const [focused, setFocused] = useState(false);
@@ -140,7 +142,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
         width: dropdownPos.width,
         zIndex: 99999,
         backgroundColor: '#fff',
-        border: `1px solid ${Colors.border}`,
+        border: `1px solid ${colors.border}`,
         borderRadius: 10,
         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
         overflow: 'hidden',
@@ -155,18 +157,18 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
           alignItems: 'center',
           gap: 8,
           padding: '10px 12px',
-          borderBottom: i < filtered.length - 1 ? `1px solid ${Colors.border}` : 'none',
+          borderBottom: i < filtered.length - 1 ? `1px solid ${colors.border}` : 'none',
           cursor: 'pointer',
-          backgroundColor: i === highlightIndex ? Colors.secondary : 'transparent',
+          backgroundColor: i === highlightIndex ? colors.secondary : 'transparent',
         },
         onMouseDown: (e: any) => {
           e.preventDefault();
           handleSelect(item);
         },
       },
-        createElement(Ionicons, { name: ICONS[item.type], size: 14, color: Colors.textSecondary }),
-        createElement('span', { style: { flex: 1, fontSize: 14, color: Colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.label),
-        createElement('span', { style: { fontSize: 11, color: Colors.textSecondary, textTransform: 'capitalize' } }, item.type),
+        createElement(Ionicons, { name: ICONS[item.type], size: 14, color: colors.textSecondary }),
+        createElement('span', { style: { flex: 1, fontSize: 14, color: colors.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, item.label),
+        createElement('span', { style: { fontSize: 11, color: colors.textSecondary, textTransform: 'capitalize' } }, item.type),
       )
     ))
   ) : null;
@@ -174,11 +176,11 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
   return (
     <View style={styles.container}>
       <View ref={inputRef} style={styles.searchRow}>
-        <Ionicons name="search-outline" size={18} color={Colors.textSecondary} style={styles.icon} />
+        <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={styles.icon} />
         <TextInput
           style={styles.input}
           placeholder={placeholder ?? 'Search recipes...'}
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => { setFocused(true); ensureSuggestions(); measureInput(); }}
@@ -212,7 +214,7 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
         />
         {value.length > 0 && (
           <TouchableOpacity onPress={() => onChangeText('')} accessibilityLabel="Clear search" accessibilityRole="button">
-            <Ionicons name="close-circle" size={18} color={Colors.textSecondary} />
+            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -226,13 +228,13 @@ export default function SearchBar({ value, onChangeText, placeholder, navigateOn
                 width: dropdownPos.width,
                 zIndex: 99999,
                 backgroundColor: '#fff',
-                border: `1px solid ${Colors.border}`,
+                border: `1px solid ${colors.border}`,
                 borderRadius: 10,
                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 padding: '12px',
                 textAlign: 'center',
                 fontSize: 13,
-                color: Colors.textSecondary,
+                color: colors.textSecondary,
               },
             }, 'Loading suggestions...'),
             document.body

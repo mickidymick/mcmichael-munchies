@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 import { useUserRole } from '../lib/useUserRole';
 
@@ -23,6 +24,7 @@ type AccessRequest = {
 };
 
 export default function PendingRequestsScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [requests, setRequests] = useState<AccessRequest[]>([]);
@@ -103,7 +105,7 @@ export default function PendingRequestsScreen() {
   }
 
   if (roleLoading || loading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (!isAdmin) return null;
@@ -111,7 +113,7 @@ export default function PendingRequestsScreen() {
   if (requests.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="checkmark-circle-outline" size={64} color={Colors.primary} />
+        <Ionicons name="checkmark-circle-outline" size={64} color={colors.primary} />
         <Text style={styles.emptyTitle}>No Pending Requests</Text>
         <Text style={styles.emptyText}>All caught up! New requests will appear here.</Text>
       </View>

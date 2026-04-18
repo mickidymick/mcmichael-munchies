@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Profile, UserRole } from '../lib/supabase';
 import { useUserRole } from '../lib/useUserRole';
 
@@ -20,6 +21,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 ];
 
 export default function AdminScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -61,7 +63,7 @@ export default function AdminScreen() {
   }
 
   if (roleLoading || loading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (!isAdmin) return null;

@@ -10,9 +10,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 
 export default function ForgotPasswordScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -64,7 +66,7 @@ export default function ForgotPasswordScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={email}
           onChangeText={(v) => { setEmail(v); setError(''); }}
           autoCapitalize="none"

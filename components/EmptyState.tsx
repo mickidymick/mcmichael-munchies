@@ -1,6 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 type Props = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,9 +24,10 @@ export default function EmptyState({
   secondaryLabel,
   onSecondary,
 }: Props) {
+  const colors = useThemeColors();
   return (
     <View style={styles.container}>
-      <Ionicons name={icon} size={56} color={Colors.primary} style={styles.icon} />
+      <Ionicons name={icon} size={56} color={colors.primary} style={styles.icon} />
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.description}>{description}</Text>
       {actionLabel && onAction && (

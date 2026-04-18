@@ -2,13 +2,15 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 export default function NotFoundScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
 
   return (
     <View style={styles.container}>
-      <Ionicons name="restaurant-outline" size={64} color={Colors.primary} />
+      <Ionicons name="restaurant-outline" size={64} color={colors.primary} />
       <Text style={styles.code}>404</Text>
       <Text style={styles.title}>Page Not Found</Text>
       <Text style={styles.subtitle}>

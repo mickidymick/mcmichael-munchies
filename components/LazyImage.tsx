@@ -3,18 +3,20 @@ import { View, StyleSheet } from 'react-native';
 import { Image, ImageProps } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 type LazyImageProps = ImageProps & {
   blurhash?: string | null;
 };
 
 export default function LazyImage({ blurhash, ...props }: LazyImageProps) {
+  const colors = useThemeColors();
   const [error, setError] = useState(false);
 
   if (error || !props.source) {
     return (
       <View style={[styles.fallback, props.style as any]}>
-        <Ionicons name="image-outline" size={32} color={Colors.textSecondary} />
+        <Ionicons name="image-outline" size={32} color={colors.textSecondary} />
       </View>
     );
   }

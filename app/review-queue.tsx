@@ -13,6 +13,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Recipe } from '../lib/supabase';
 import FamilyBadge from '../components/FamilyBadge';
 
@@ -24,6 +25,7 @@ type QueueItem = {
 };
 
 export default function ReviewQueueScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,13 +100,13 @@ export default function ReviewQueueScreen() {
   }
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />;
+    return <ActivityIndicator style={{ flex: 1 }} color={colors.primary} />;
   }
 
   if (error) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
+        <Ionicons name="alert-circle-outline" size={48} color={colors.textSecondary} />
         <Text style={styles.emptyText}>Failed to load review queue.</Text>
         <TouchableOpacity onPress={loadQueue}>
           <Text style={styles.emptyLink}>Try again</Text>
@@ -116,7 +118,7 @@ export default function ReviewQueueScreen() {
   if (items.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Ionicons name="checkmark-circle-outline" size={64} color={Colors.primary} />
+        <Ionicons name="checkmark-circle-outline" size={64} color={colors.primary} />
         <Text style={styles.emptyTitle}>All caught up!</Text>
         <Text style={styles.emptyText}>No recipes to review. Import some to get started.</Text>
         <View style={styles.emptyButtons}>
@@ -171,7 +173,7 @@ export default function ReviewQueueScreen() {
                 />
               ) : (
                 <View style={[styles.cardImage, styles.imagePlaceholder]}>
-                  <Ionicons name="restaurant-outline" size={20} color={Colors.textSecondary} />
+                  <Ionicons name="restaurant-outline" size={20} color={colors.textSecondary} />
                 </View>
               )}
               <View style={styles.cardInfo}>
@@ -192,14 +194,14 @@ export default function ReviewQueueScreen() {
                 disabled={removing === item.id}
                 dataSet={{ hover: 'btn' }}
               >
-                <Ionicons name="trash-outline" size={16} color={Colors.danger} />
+                <Ionicons name="trash-outline" size={16} color={colors.danger} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.editBtn}
                 onPress={() => router.push(`/edit-recipe/${item.recipe_id}`)}
                 dataSet={{ hover: 'btn' }}
               >
-                <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
+                <Ionicons name="pencil-outline" size={16} color={colors.primary} />
                 <Text style={styles.editBtnText}>Edit</Text>
               </TouchableOpacity>
               <TouchableOpacity

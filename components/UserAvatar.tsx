@@ -1,5 +1,6 @@
 import { View, Image, Text, StyleSheet } from 'react-native';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 type Props = {
   name?: string | null;
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function UserAvatar({ name, avatarUrl, size = 32 }: Props) {
+  const colors = useThemeColors();
   const borderRadius = size / 2;
   const fontSize = size * 0.4;
 

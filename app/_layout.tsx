@@ -4,6 +4,7 @@ import { Platform, View } from 'react-native';
 import { useFonts, Pacifico_400Regular } from '@expo-google-fonts/pacifico';
 import { useEffect } from 'react';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import NavBar from '../components/NavBar';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { ThemeProvider } from '../lib/useTheme';
@@ -69,6 +70,7 @@ function useWebMeta() {
 }
 
 function useWebHoverStyles() {
+  const colors = useThemeColors();
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const style = document.createElement('style');
@@ -83,7 +85,7 @@ function useWebHoverStyles() {
         [data-hover="icon"] { transition: transform 0.15s ease; }
         [data-hover="icon"]:hover { transform: scale(1.2); }
         [data-hover="nav"] { transition: background-color 0.15s ease; }
-        [data-hover="nav"]:hover { background-color: ${Colors.secondary}; }
+        [data-hover="nav"]:hover { background-color: ${colors.secondary}; }
         [data-hover="family"] { transition: box-shadow 0.15s ease, border-color 0.15s ease; }
         [data-hover="family"]:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-color: #c47c30 !important; }
         [data-hover="catChip"] { transition: transform 0.1s ease, box-shadow 0.1s ease; }
@@ -92,7 +94,7 @@ function useWebHoverStyles() {
     `;
     document.head.appendChild(style);
     return () => { document.head.removeChild(style); };
-  }, []);
+  }, [colors]);
 }
 
 export default function RootLayout() {

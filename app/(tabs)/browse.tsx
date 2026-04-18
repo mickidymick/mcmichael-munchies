@@ -12,6 +12,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 const HEADER_TOP = Layout.headerTop;
 
 import { supabase, Recipe } from '../../lib/supabase';
@@ -33,6 +34,7 @@ const PAGE_SIZE = 20;
 const FETCH_SIZE = 40;
 
 export default function BrowseScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const { isMemberOrAdmin } = useUserRole();
   const { isFavorite } = useFavorites();
@@ -260,8 +262,8 @@ export default function BrowseScreen() {
         <View style={styles.headerControls}>
           {/* Filter toggle */}
           <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
-            <Ionicons name="options-outline" size={18} color={showFilters ? Colors.primary : Colors.text} />
-            <Text style={[styles.filterToggleText, showFilters && { color: Colors.primary }]}>
+            <Ionicons name="options-outline" size={18} color={showFilters ? colors.primary : colors.text} />
+            <Text style={[styles.filterToggleText, showFilters && { color: colors.primary }]}>
               Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
             </Text>
           </TouchableOpacity>
@@ -362,7 +364,7 @@ export default function BrowseScreen() {
           onEndReachedThreshold={0.5}
           ListFooterComponent={
             <>
-              {loadingMore && <ActivityIndicator style={{ paddingVertical: 16 }} color={Colors.primary} />}
+              {loadingMore && <ActivityIndicator style={{ paddingVertical: 16 }} color={colors.primary} />}
               <View style={styles.footer}>
                 <Text style={styles.footerText}>McMichael Munchies. Recipes from our home to yours.</Text>
               </View>

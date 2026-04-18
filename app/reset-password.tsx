@@ -9,9 +9,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 
 export default function ResetPasswordScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -58,7 +60,7 @@ export default function ResetPasswordScreen() {
   if (checking) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -115,7 +117,7 @@ export default function ResetPasswordScreen() {
         <TextInput
           style={styles.input}
           placeholder="New password"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={password}
           onChangeText={(v) => { setPassword(v); setError(''); }}
           secureTextEntry
@@ -123,7 +125,7 @@ export default function ResetPasswordScreen() {
         <TextInput
           style={styles.input}
           placeholder="Confirm new password"
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           value={confirm}
           onChangeText={(v) => { setConfirm(v); setError(''); }}
           secureTextEntry

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase } from '../lib/supabase';
 
 type Props = {
@@ -24,6 +25,7 @@ function enhancePrompt(prompt: string): string {
 }
 
 export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: Props) {
+  const colors = useThemeColors();
   const [prompt, setPrompt] = useState(initialPrompt);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,7 +74,7 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
         <View style={styles.header}>
           <Text style={styles.title}>Generate with AI</Text>
           <TouchableOpacity onPress={onCancel} accessibilityLabel="Close">
-            <Ionicons name="close" size={24} color={Colors.textSecondary} />
+            <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -82,7 +84,7 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
           value={prompt}
           onChangeText={setPrompt}
           placeholder="Describe the dish..."
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={colors.textSecondary}
           multiline
           numberOfLines={2}
         />
@@ -91,21 +93,21 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
         <View style={styles.previewArea}>
           {!imageUrl && !loading && !error && (
             <View style={styles.previewPlaceholder}>
-              <Ionicons name="sparkles-outline" size={32} color={Colors.textSecondary} />
+              <Ionicons name="sparkles-outline" size={32} color={colors.textSecondary} />
               <Text style={styles.placeholderText}>Click Generate to create an image</Text>
             </View>
           )}
 
           {error && (
             <View style={styles.previewPlaceholder}>
-              <Ionicons name="alert-circle-outline" size={32} color={Colors.danger} />
+              <Ionicons name="alert-circle-outline" size={32} color={colors.danger} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
           {loading && (
             <View style={styles.previewPlaceholder}>
-              <ActivityIndicator color={Colors.primary} size="large" />
+              <ActivityIndicator color={colors.primary} size="large" />
               <Text style={styles.placeholderText}>Generating... (5–15s)</Text>
             </View>
           )}
@@ -123,7 +125,7 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
             onPress={generate}
             disabled={loading || !prompt.trim()}
           >
-            <Ionicons name={imageUrl ? 'refresh' : 'sparkles'} size={16} color={Colors.primary} />
+            <Ionicons name={imageUrl ? 'refresh' : 'sparkles'} size={16} color={colors.primary} />
             <Text style={styles.secondaryBtnText}>{imageUrl ? 'Regenerate' : 'Generate'}</Text>
           </TouchableOpacity>
           {imageUrl && !error && (

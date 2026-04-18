@@ -12,6 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Colors, Layout } from '../../constants/colors';
+import { useThemeColors } from '../../lib/useTheme';
 import { supabase, Recipe } from '../../lib/supabase';
 
 const FAVORITES_CACHE_KEY = 'favorites_cache_v1';
@@ -26,6 +27,7 @@ import { toggleMulti } from '../../lib/utils';
 const HEADER_TOP = Layout.headerTop;
 
 export default function FavoritesScreen() {
+  const colors = useThemeColors();
   const router = useRouter();
   const [allFavorites, setAllFavorites] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,8 +204,8 @@ export default function FavoritesScreen() {
 
         <View style={styles.headerControls}>
           <TouchableOpacity onPress={() => setShowFilters(!showFilters)} style={styles.filterToggle}>
-            <Ionicons name="options-outline" size={18} color={showFilters ? Colors.primary : Colors.text} />
-            <Text style={[styles.filterToggleText, showFilters && { color: Colors.primary }]}>
+            <Ionicons name="options-outline" size={18} color={showFilters ? colors.primary : colors.text} />
+            <Text style={[styles.filterToggleText, showFilters && { color: colors.primary }]}>
               Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
             </Text>
           </TouchableOpacity>
@@ -249,7 +251,7 @@ export default function FavoritesScreen() {
 
       {staleWarning && (
         <TouchableOpacity style={styles.staleBanner} onPress={loadFavorites}>
-          <Ionicons name="cloud-offline-outline" size={16} color={Colors.primary} />
+          <Ionicons name="cloud-offline-outline" size={16} color={colors.primary} />
           <Text style={styles.staleBannerText}>Showing cached data. Tap to retry.</Text>
         </TouchableOpacity>
       )}

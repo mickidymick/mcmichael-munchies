@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { supabase, Collection } from '../lib/supabase';
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export default function CollectionPicker({ visible, recipeId, userId, onClose, onDone }: Props) {
+  const colors = useThemeColors();
   const [collections, setCollections] = useState<Collection[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -78,12 +80,12 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
           <View style={styles.header}>
             <Text style={styles.title}>Add to Collection</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.text} />
+              <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
 
           {loading ? (
-            <ActivityIndicator style={{ paddingVertical: 40 }} color={Colors.primary} />
+            <ActivityIndicator style={{ paddingVertical: 40 }} color={colors.primary} />
           ) : (
             <>
               <FlatList
@@ -98,9 +100,9 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
                     style={styles.collectionRow}
                     onPress={() => addToCollection(item.id, item.name)}
                   >
-                    <Ionicons name="book-outline" size={18} color={Colors.primary} />
+                    <Ionicons name="book-outline" size={18} color={colors.primary} />
                     <Text style={styles.collectionName}>{item.name}</Text>
-                    <Ionicons name="add-circle-outline" size={20} color={Colors.primary} />
+                    <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
                   </TouchableOpacity>
                 )}
               />
@@ -110,7 +112,7 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
                   <TextInput
                     style={styles.createInput}
                     placeholder="New collection name"
-                    placeholderTextColor={Colors.textSecondary}
+                    placeholderTextColor={colors.textSecondary}
                     value={newName}
                     onChangeText={setNewName}
                     onSubmitEditing={createAndAdd}
@@ -129,7 +131,7 @@ export default function CollectionPicker({ visible, recipeId, userId, onClose, o
                   style={styles.newCollectionBtn}
                   onPress={() => setShowCreate(true)}
                 >
-                  <Ionicons name="add" size={18} color={Colors.primary} />
+                  <Ionicons name="add" size={18} color={colors.primary} />
                   <Text style={styles.newCollectionText}>New Collection</Text>
                 </TouchableOpacity>
               )}

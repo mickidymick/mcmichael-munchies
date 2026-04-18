@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 
 type Props = {
   label: string;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export default function ChipRow({ label, items, selected, onToggle }: Props) {
+  const colors = useThemeColors();
   return (
     <View style={styles.section}>
       <Text style={styles.label}>{label}</Text>

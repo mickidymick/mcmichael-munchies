@@ -1,5 +1,6 @@
 import { View, Platform, StyleProp, ViewStyle } from 'react-native';
 import { Colors } from '../constants/colors';
+import { useThemeColors } from '../lib/useTheme';
 import { useRef, useEffect, ReactNode } from 'react';
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 const dragState: Record<string, { from: number | null; type: string | null }> = {};
 
 export default function DraggableRow({ index, dragType, onReorder, style, children }: Props) {
+  const colors = useThemeColors();
   const ref = useRef<View>(null);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function DraggableRow({ index, dragType, onReorder, style, childr
       e.preventDefault();
       const state = dragState[dragType];
       if (state?.from !== null && state?.from !== index) {
-        el.style.outline = `2px dashed ${Colors.primary}`;
+        el.style.outline = `2px dashed ${colors.primary}`;
         el.style.outlineOffset = '-2px';
         el.style.borderRadius = '10px';
       }
