@@ -82,9 +82,9 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.modal}>
+      <View style={[styles.modal, { backgroundColor: colors.surface }]}>
         <View style={styles.header}>
-          <Text style={styles.title}>Find a stock photo</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Find a stock photo</Text>
           <TouchableOpacity onPress={onCancel} accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -92,7 +92,7 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
 
         <View style={styles.searchRow}>
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
             value={query}
             onChangeText={setQuery}
             placeholder="Search recipes..."
@@ -140,7 +140,7 @@ export default function StockPhotoPicker({ initialQuery, onSelect, onCancel }: P
                   accessibilityLabel={r.title}
                 >
                   <Image source={{ uri: r.image }} style={styles.gridImage} />
-                  <Text style={styles.gridCaption} numberOfLines={2}>{r.title}</Text>
+                  <Text style={[styles.gridCaption, { color: colors.text, backgroundColor: colors.surface }]} numberOfLines={2}>{r.title}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>

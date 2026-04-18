@@ -76,9 +76,9 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.modal}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Generate with AI</Text>
+      <View style={[styles.modal, { backgroundColor: colors.surface }]}>
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.title, { color: colors.text }]}>Generate with AI</Text>
           <TouchableOpacity onPress={onCancel} accessibilityLabel="Close">
             <Ionicons name="close" size={24} color={colors.textSecondary} />
           </TouchableOpacity>
@@ -90,9 +90,9 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.label}>Prompt</Text>
+          <Text style={[styles.label, { color: colors.text }]}>Prompt</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
             value={prompt}
             onChangeText={setPrompt}
             placeholder="Describe the dish..."
@@ -100,7 +100,7 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
             multiline
             numberOfLines={2}
           />
-          <Text style={styles.hint}>We add styling cues automatically (food photography, plating, lighting).</Text>
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>We add styling cues automatically (food photography, plating, lighting).</Text>
 
           <View style={[styles.previewArea, { width: previewSize, height: previewSize }]}>
             {!imageUrl && !loading && !error && (
@@ -131,7 +131,7 @@ export default function AIImageGenerator({ initialPrompt, onSelect, onCancel }: 
         </ScrollView>
 
         {/* Buttons always pinned at bottom */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { borderTopColor: colors.border }]}>
           <View style={styles.buttons}>
             <TouchableOpacity
               style={[styles.secondaryBtn, (loading || !prompt.trim()) && styles.disabledBtn]}

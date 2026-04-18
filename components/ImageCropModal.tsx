@@ -78,8 +78,8 @@ export default function ImageCropModal({ imageUri, aspect = [16, 9], onCrop, onC
 
   return (
     <View style={styles.overlay}>
-      <View style={styles.modal}>
-        <Text style={styles.title}>Crop Image</Text>
+      <View style={[styles.modal, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Crop Image</Text>
         <View style={styles.cropContainer}>
           <Cropper
             image={imageUri}
@@ -91,10 +91,10 @@ export default function ImageCropModal({ imageUri, aspect = [16, 9], onCrop, onC
             onCropComplete={onCropComplete}
           />
         </View>
-        <Text style={styles.hint}>Drag to reposition, scroll to zoom</Text>
+        <Text style={[styles.hint, { color: colors.textSecondary }]}>Drag to reposition, scroll to zoom</Text>
         <View style={styles.buttons}>
-          <TouchableOpacity style={styles.cancelBtn} onPress={onCancel} disabled={processing}>
-            <Text style={styles.cancelBtnText}>Cancel</Text>
+          <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.border }]} onPress={onCancel} disabled={processing}>
+            <Text style={[styles.cancelBtnText, { color: colors.text }]}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} disabled={processing}>
             {processing ? (
