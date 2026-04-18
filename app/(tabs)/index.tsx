@@ -298,7 +298,6 @@ export default function HomeScreen() {
               if (resumeTimer.current) clearTimeout(resumeTimer.current);
             }}
             onTouchEnd={() => {
-              // Small delay to read final scroll position after momentum
               setTimeout(() => {
                 if (scrollRef.current) {
                   // @ts-ignore - access underlying DOM scrollLeft on web
@@ -311,8 +310,13 @@ export default function HomeScreen() {
               resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
             }}
             onScroll={(e) => {
-              if (!autoScroll) {
-                scrollPos.current = e.nativeEvent.contentOffset.x;
+              // Always track scroll position so auto-scroll resumes from the right place
+              scrollPos.current = e.nativeEvent.contentOffset.x;
+              // Pause auto-scroll on any user-initiated scroll (trackpad, touch, etc.)
+              if (autoScroll) {
+                setAutoScroll(false);
+                if (resumeTimer.current) clearTimeout(resumeTimer.current);
+                resumeTimer.current = setTimeout(() => setAutoScroll(true), 3000);
               }
             }}
             scrollEventThrottle={100}
