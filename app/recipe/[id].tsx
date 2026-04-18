@@ -511,16 +511,34 @@ export default function RecipeDetailScreen() {
     }
     style.textContent = `
       @media print {
+        /* Hide everything except the recipe */
         body * { visibility: hidden; }
         #recipe-printable, #recipe-printable * { visibility: visible; color: #333 !important; }
+
+        /* Break out of scroll containers and fixed positioning */
+        html, body { height: auto !important; overflow: visible !important; }
+        body > div, body > div > div, body > div > div > div {
+          height: auto !important; overflow: visible !important;
+          position: static !important; display: block !important;
+        }
+
         #recipe-printable {
           position: absolute; left: 0; top: 0; width: 100%;
           font-family: Georgia, serif; padding: 24px; color: #333;
           max-width: 700px; margin: 0 auto;
+          height: auto !important; overflow: visible !important;
         }
+
+        /* Image handling */
         #recipe-printable img { max-width: 100%; page-break-inside: avoid; }
-        #recipe-printable [style*="background"] { background: transparent !important; -webkit-print-color-adjust: exact; }
-        h1, h2, h3, p, li { page-break-inside: avoid; orphans: 3; widows: 3; }
+
+        /* Prevent cutting content mid-element */
+        #recipe-printable div, #recipe-printable p, #recipe-printable span {
+          page-break-inside: avoid; orphans: 3; widows: 3;
+        }
+
+        /* Clean up backgrounds for print */
+        #recipe-printable [style*="background"] { background: transparent !important; }
       }
     `;
     window.print();
